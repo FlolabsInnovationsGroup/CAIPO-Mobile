@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "523970252754",
+    "project_id": "caipo-mobile-8aa1c",
+    "storage_bucket": "caipo-mobile-8aa1c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:523970252754:android:82bfec306ba4560791820b",
+        "android_client_info": {
+          "package_name": "com.flomadlabs.caipoappv0"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDt7i6wgC_61QXqbUWr0Nc_5yGy6kAZEHw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

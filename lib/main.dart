@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // Load .env
+import 'services/firebase_service.dart'; // Import Firebase service
 import 'theme_provider.dart';
 import 'screens/settings/settings_page.dart';
 import 'screens/home/home_screen.dart';
@@ -9,7 +10,12 @@ import 'screens/auth/auth_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase with platform awareness
+  await FirebaseService.initialize();
+  
   await dotenv.load(fileName: ".env"); // Load environment variables
+  
   runApp(
     MultiProvider(
       providers: [
