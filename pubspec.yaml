@@ -5,23 +5,32 @@ publish_to: 'none' # Not published to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.5.0 <4.0.0" # Specify the Dart SDK version constraint
+  sdk: ">=3.5.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  intl: ^0.17.0
   flutter_spinkit: ^5.1.0
-  font_awesome_flutter: ^10.1.0
-  cupertino_icons: ^1.0.2
-  firebase_auth: ^5.3.4
+  font_awesome_flutter: ^10.1.0  # Moved outside `flutter:`  
+  firebase_core: ^3.12.1  # Ensure compatibility with cloud_firestore
+  cloud_firestore: ^5.6.5  # Remove duplicate, ensure single entry
+  intl: 0.19.0  # Match flutter_localizations
+  flutter_localizations:
+    sdk: flutter
+
+  google_fonts: 4.0.4  # Latest version
+  firebase_auth: ^5.5.1
   provider: ^6.1.2
   dialogflow_flutter: ^1.0.0
-  file_picker: ^8.1.6
+  file_picker: ^8.3.5
   speech_to_text: ^7.0.0
-  http: ^0.13.3
   googleapis_auth: ^1.4.1
-  flutter_dotenv: ^5.0.2
+  http: ^0.13.3  # Downgrade to match dialogflow_flutter
+  flutter_dotenv: ^5.2.1
+  firebase_storage: ^12.4.4
+  firebase_messaging: ^15.2.4
+  firebase_analytics: ^11.4.4
+  firebase_crashlytics: ^4.3.4
 
 dev_dependencies:
   flutter_test:
@@ -32,4 +41,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/logo.png
-  #   - .env
+    - .env
