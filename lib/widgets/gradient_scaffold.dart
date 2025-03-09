@@ -21,13 +21,16 @@ class GradientScaffold extends StatelessWidget {
     return Scaffold(
       appBar: appBar,
       bottomNavigationBar: bottomNavigationBar,
-      // Set a base background color for the Scaffold itself
-      backgroundColor: Colors.black,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: themeProvider.scaffoldGradient,
+      backgroundColor: themeProvider.themeMode == ThemeMode.dark 
+          ? Colors.black 
+          : Colors.white,
+      body: SafeArea(
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: themeProvider.scaffoldGradient,
+          ),
+          child: body,
         ),
-        child: body,
       ),
     );
   }

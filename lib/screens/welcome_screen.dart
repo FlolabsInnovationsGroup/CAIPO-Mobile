@@ -39,6 +39,7 @@ class WelcomeScreenState extends State<WelcomeScreen>
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
 
     return GradientScaffold(
       body: SafeArea(
@@ -56,25 +57,39 @@ class WelcomeScreenState extends State<WelcomeScreen>
                   builder: (context, value, child) {
                     return Transform.scale(
                       scale: value,
-                      child: Image.asset('assets/logo.png', height: 100),
+                      child: Image.asset(
+                        'assets/logo.png',
+                        height: 100,
+                        // Remove the color tinting for now to debug
+                        // color: isDarkMode ? Colors.white : null,
+                      ),
                     );
                   },
                 ),
                 const SizedBox(height: 20),
-                const Text(
+                Text(
                   'CAIPO by FLOMAD',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                    shadows: [
+                      Shadow(
+                        color: Color.fromRGBO(0, 0, 0, 0.1),
+                        offset: const Offset(0, 2),
+                        blurRadius: 4,
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 10),
-                const Text(
+                Text(
                   'Your personalized AI companion',
                   style: TextStyle(
-                    color: Colors.white70, 
-                    fontSize: 16
+                    color: isDarkMode 
+                        ? Colors.grey.shade300 
+                        : Colors.grey.shade700,
+                    fontSize: 16,
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -87,8 +102,8 @@ class WelcomeScreenState extends State<WelcomeScreen>
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.blue.withAlpha(77),
-                        spreadRadius: 2,
+                        color: Colors.blue.withAlpha(isDarkMode ? 51 : 77),
+                        spreadRadius: isDarkMode ? 1 : 2,
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -104,16 +119,21 @@ class WelcomeScreenState extends State<WelcomeScreen>
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
+                      backgroundColor: Colors.blueAccent.withOpacity(
+                        isDarkMode ? 0.8 : 1.0
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text(
+                    child: Text(
                       'LOG IN',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Colors.white.withOpacity(
+                          isDarkMode ? 0.95 : 1.0
+                        ),
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.2,
@@ -134,19 +154,41 @@ class WelcomeScreenState extends State<WelcomeScreen>
                     );
                   },
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24, 
+                      vertical: 12
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
                     backgroundColor: Colors.transparent,
-                    foregroundColor: Colors.white.withAlpha(204),
+                    foregroundColor: isDarkMode 
+                        ? Colors.white.withOpacity(0.8) 
+                        : Colors.black87.withOpacity(0.7),
+                    shadowColor: Colors.transparent,
                   ),
-                  child: const Text(
+                  child: Text(
                     'Get Started',
                     style: TextStyle(
-                      color: Colors.white70,
+                      color: isDarkMode 
+                          ? Colors.grey.shade300 
+                          : Colors.grey.shade700,
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                
+                // Optional: Add version number or additional info
+                Padding(
+                  padding: const EdgeInsets.only(top: 40),
+                  child: Text(
+                    'Version 1.0.0',
+                    style: TextStyle(
+                      color: isDarkMode 
+                          ? Colors.grey.shade500 
+                          : Colors.grey.shade600,
+                      fontSize: 12,
                     ),
                   ),
                 ),
