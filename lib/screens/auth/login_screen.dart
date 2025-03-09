@@ -41,6 +41,7 @@ class _LoginScreenState extends State<LoginScreen>
     await Future.delayed(const Duration(seconds: 1));
     setState(() => isLoading = false);
 
+    if (!mounted) return;
     Navigator.pushReplacementNamed(context, '/home');
   }
 

@@ -68,15 +68,11 @@ class HomeScreenState extends State<HomeScreen> {
                 margin: const EdgeInsets.all(8.0),
                 padding: const EdgeInsets.all(8.0),
                 decoration: BoxDecoration(
-                  color: isDarkMode 
-                      ? Colors.black.withOpacity(0.4) 
-                      : Colors.white.withOpacity(0.9),
+                  color: isDarkMode ? const Color(0xFF1E1E2E) : Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: isDarkMode 
-                          ? Colors.black12 
-                          : Colors.grey.shade300,
+                      color: isDarkMode ? Colors.black54 : Colors.grey.shade300,
                       spreadRadius: 2,
                       blurRadius: 5,
                       offset: const Offset(0, 3),
@@ -132,7 +128,7 @@ class HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: SpinKitThreeBounce(
         color: isDarkMode 
-            ? Colors.blueAccent.withOpacity(0.7) 
+            ? Colors.blueAccent.withAlpha(179)
             : Colors.blueAccent,
         size: 20.0,
       ),
@@ -145,9 +141,9 @@ class HomeScreenState extends State<HomeScreen> {
     
     return BottomNavigationBar(
       backgroundColor: isDarkMode 
-          ? Colors.black.withOpacity(0.8) 
+          ? Colors.black.withAlpha(204)
           : Colors.white,
-      selectedItemColor: Colors.blueAccent.withOpacity(isDarkMode ? 0.9 : 1.0),
+      selectedItemColor: Colors.blueAccent.withAlpha(isDarkMode ? 230 : 255),
       unselectedItemColor: isDarkMode 
           ? Colors.grey.shade500 
           : Colors.grey.shade600,
@@ -177,36 +173,10 @@ class HomeScreenState extends State<HomeScreen> {
               controller: _messageController,
               decoration: InputDecoration(
                 hintText: "Type a message...",
-                hintStyle: TextStyle(
-                  color: isDarkMode 
-                      ? Colors.grey.shade400 
-                      : Colors.grey.shade600,
-                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(
-                    color: isDarkMode 
-                        ? Colors.grey.shade800 
-                        : Colors.grey.shade300,
-                  ),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(
-                    color: isDarkMode 
-                        ? Colors.grey.shade800 
-                        : Colors.grey.shade300,
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(
-                    color: Colors.blueAccent.withOpacity(isDarkMode ? 0.7 : 1.0),
-                  ),
-                ),
-                fillColor: isDarkMode 
-                    ? Colors.grey.shade900 
-                    : Colors.grey.shade100,
+                fillColor: isDarkMode ? Colors.grey.shade900 : Colors.grey.shade100,
                 filled: true,
               ),
               style: TextStyle(
@@ -216,7 +186,7 @@ class HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(width: 8),
           CircleAvatar(
-            backgroundColor: Colors.blueAccent.withOpacity(isDarkMode ? 0.8 : 1.0),
+            backgroundColor: Colors.blueAccent,
             radius: 24,
             child: IconButton(
               icon: const Icon(Icons.send, color: Colors.white, size: 22),
@@ -245,17 +215,17 @@ class HomeScreenState extends State<HomeScreen> {
           alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
           child: Container(
             margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: isUser
-                  ? Colors.blueAccent.withOpacity(isDarkMode ? 0.8 : 1.0)
+                  ? Colors.blueAccent
                   : isDarkMode 
-                      ? Colors.grey.shade900 
+                      ? const Color(0xFF1E1E2E) 
                       : Colors.grey.shade200,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withAlpha(26),
                   blurRadius: 3,
                   offset: const Offset(0, 1),
                 ),
@@ -268,7 +238,7 @@ class HomeScreenState extends State<HomeScreen> {
                 color: isUser 
                     ? Colors.white 
                     : isDarkMode 
-                        ? Colors.grey.shade100 
+                        ? Colors.grey[300] 
                         : Colors.black87,
               ),
             ),

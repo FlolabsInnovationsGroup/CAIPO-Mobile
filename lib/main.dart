@@ -50,7 +50,7 @@ class MyApp extends StatelessWidget {
           bodyMedium: TextStyle(color: Colors.black87),
         ),
         cardTheme: CardTheme(
-          color: Colors.white.withOpacity(0.9),
+          color: Colors.white.withAlpha(230),
           elevation: 4,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -70,7 +70,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
         cardTheme: CardTheme(
-          color: Colors.black.withOpacity(0.7),
+          color: Colors.black.withAlpha(179),
           elevation: 4,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
