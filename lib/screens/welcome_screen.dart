@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
-import 'auth/auth_screen.dart'; // Import the authentication screen
+import 'package:provider/provider.dart';
+import 'auth/auth_screen.dart';
+import '../../widgets/gradient_scaffold.dart';
+import '../../theme_provider.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
 
   @override
-  _WelcomeScreenState createState() => _WelcomeScreenState();
+  WelcomeScreenState createState() => WelcomeScreenState();
 }
 
-class _WelcomeScreenState extends State<WelcomeScreen>
+class WelcomeScreenState extends State<WelcomeScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -35,22 +38,28 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF001F3F), Color(0xFF000000)],
-          ),
-        ),
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
+    return GradientScaffold(
+      body: SafeArea(
         child: Center(
           child: FadeTransition(
             opacity: _fadeAnimation,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset('assets/logo.png', height: 100),
+                // Logo with slight bounce animation
+                TweenAnimationBuilder(
+                  duration: const Duration(milliseconds: 1200),
+                  tween: Tween<double>(begin: 0.9, end: 1.0),
+                  curve: Curves.elasticOut,
+                  builder: (context, value, child) {
+                    return Transform.scale(
+                      scale: value,
+                      child: Image.asset('assets/logo.png', height: 100),
+                    );
+                  },
+                ),
                 const SizedBox(height: 20),
                 const Text(
                   'CAIPO by FLOMAD',
@@ -63,14 +72,28 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 const SizedBox(height: 10),
                 const Text(
                   'Your personalized AI companion',
-                  style: TextStyle(color: Colors.white70, fontSize: 16),
+                  style: TextStyle(
+                    color: Colors.white70, 
+                    fontSize: 16
+                  ),
                 ),
                 const SizedBox(height: 40),
 
-                // Log In Button with Animated Press Effect
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeInOut,
+                // Enhanced login button with hover effect
+                Container(
+                  width: MediaQuery.of(context).size.width * 0.8,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.blue.withAlpha(77),
+                        spreadRadius: 2,
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.push(
@@ -82,26 +105,25 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blueAccent,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 100, vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      elevation: 6,
-                      shadowColor: Colors.blue.withOpacity(0.5),
+                      elevation: 0,
                     ),
                     child: const Text(
                       'LOG IN',
                       style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold),
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 20),
 
-                // Get Started Button with Subtle Animation
+                // Enhanced Get Started button
                 TextButton(
                   onPressed: () {
                     Navigator.push(
@@ -111,12 +133,21 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       ),
                     );
                   },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.white.withAlpha(204),
+                  ),
                   child: const Text(
                     'Get Started',
                     style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 16,
-                        decoration: TextDecoration.underline),
+                      color: Colors.white70,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],

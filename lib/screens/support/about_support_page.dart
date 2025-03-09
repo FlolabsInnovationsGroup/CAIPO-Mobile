@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
+import '../../widgets/gradient_scaffold.dart';
 
 class AboutSupportPage extends StatelessWidget {
   const AboutSupportPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(
-        title: const Text('About & Support', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
+        title: const Text('About & Support',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.white)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -20,12 +24,16 @@ class AboutSupportPage extends StatelessWidget {
           children: [
             const Text(
               'About CAIPO AI Companion',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18, 
+                fontWeight: FontWeight.bold,
+                color: Colors.white
+              ),
             ),
             const SizedBox(height: 8),
             const Text(
               'CAIPO is your AI-powered assistant designed to help streamline tasks, provide insights, and improve productivity.',
-              style: TextStyle(fontSize: 16),
+              style: TextStyle(fontSize: 16, color: Colors.white70),
             ),
             const SizedBox(height: 20),
             const Text(

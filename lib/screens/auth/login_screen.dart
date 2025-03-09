@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import '../../widgets/gradient_scaffold.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -53,130 +54,123 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF001F3F), Color(0xFF000000)],
-          ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: FadeTransition(
-              opacity: _controller,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ScaleTransition(
-                    scale: _controller,
-                    child: Column(
-                      children: [
-                        Image.asset('assets/logo.png', height: 80),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'CAIPO',
-                          style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white),
-                        ),
-                        const Text('AI Companion',
-                            style: TextStyle(color: Colors.white70)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  buildInputField(
-                    controller: emailController,
-                    hintText: 'Enter your email/phone',
-                    icon: Icons.email,
-                  ),
-                  const SizedBox(height: 16),
-                  buildInputField(
-                    controller: passwordController,
-                    hintText: 'Enter password',
-                    icon: Icons.lock,
-                    obscureText: true,
-                  ),
-                  Row(
+    // Now using GradientScaffold instead of Container with a custom gradient
+    return GradientScaffold(
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: FadeTransition(
+            opacity: _controller,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ScaleTransition(
+                  scale: _controller,
+                  child: Column(
                     children: [
-                      Checkbox(
-                        value: rememberMe,
-                        onChanged: (value) {
-                          setState(() => rememberMe = value!);
-                        },
-                        activeColor: Colors.blueAccent,
+                      Image.asset('assets/logo.png', height: 80),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'CAIPO',
+                        style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white),
                       ),
-                      const Text("Remember Me",
+                      const Text('AI Companion',
                           style: TextStyle(color: Colors.white70)),
                     ],
                   ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {},
-                      child: const Text(
-                        'Forgot Password?',
-                        style: TextStyle(
-                            color: Colors.blueAccent,
-                            decoration: TextDecoration.underline),
-                      ),
+                ),
+                const SizedBox(height: 40),
+                buildInputField(
+                  controller: emailController,
+                  hintText: 'Enter your email/phone',
+                  icon: Icons.email,
+                ),
+                const SizedBox(height: 16),
+                buildInputField(
+                  controller: passwordController,
+                  hintText: 'Enter password',
+                  icon: Icons.lock,
+                  obscureText: true,
+                ),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: rememberMe,
+                      onChanged: (value) {
+                        setState(() => rememberMe = value!);
+                      },
+                      activeColor: Colors.blueAccent,
+                      checkColor: Colors.white,
+                    ),
+                    const Text("Remember Me",
+                        style: TextStyle(color: Colors.white70)),
+                  ],
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {},
+                    child: const Text(
+                      'Forgot Password?',
+                      style: TextStyle(
+                          color: Colors.blueAccent,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  GestureDetector(
-                    onTapDown: (_) => setState(() => isLoading = true),
-                    onTapUp: (_) => setState(() => isLoading = false),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      transform:
-                          isLoading ? Matrix4.identity().scaled(0.98) : Matrix4.identity(),
-                      child: ElevatedButton(
-                        onPressed: isLoading ? null : handleLogin,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          backgroundColor: Colors.blueAccent,
-                          elevation: 6,
-                          shadowColor: Colors.blue.withOpacity(0.5),
+                ),
+                const SizedBox(height: 16),
+                GestureDetector(
+                  onTapDown: (_) => setState(() => isLoading = true),
+                  onTapUp: (_) => setState(() => isLoading = false),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    transform:
+                        isLoading ? Matrix4.identity().scaled(0.98) : Matrix4.identity(),
+                    child: ElevatedButton(
+                      onPressed: isLoading ? null : handleLogin,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: isLoading
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text(
-                                'Login',
-                                style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white),
-                              ),
+                        backgroundColor: Colors.blueAccent,
+                        elevation: 6,
+                        shadowColor: Colors.blue.withAlpha(128),
                       ),
+                      child: isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                              'Login',
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white),
+                            ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  const Text('Sign in with',
-                      style: TextStyle(color: Colors.white70, fontSize: 16)),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      socialButton(FontAwesomeIcons.google, () {}),
-                      const SizedBox(width: 16),
-                      socialButton(FontAwesomeIcons.apple, () {}),
-                      const SizedBox(width: 16),
-                      socialButton(FontAwesomeIcons.facebook, () {}),
-                      const SizedBox(width: 16),
-                      socialButton(FontAwesomeIcons.linkedin, () {}),
-                    ],
-                  ),
-                  const SizedBox(height: 30),
-                ],
-              ),
+                ),
+                const SizedBox(height: 24),
+                const Text('Sign in with',
+                    style: TextStyle(color: Colors.white70, fontSize: 16)),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    socialButton(FontAwesomeIcons.google, () {}),
+                    const SizedBox(width: 16),
+                    socialButton(FontAwesomeIcons.apple, () {}),
+                    const SizedBox(width: 16),
+                    socialButton(FontAwesomeIcons.facebook, () {}),
+                    const SizedBox(width: 16),
+                    socialButton(FontAwesomeIcons.linkedin, () {}),
+                  ],
+                ),
+                const SizedBox(height: 30),
+              ],
             ),
           ),
         ),
@@ -204,14 +198,26 @@ class _LoginScreenState extends State<LoginScreen>
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
         ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.blueAccent, width: 2),
+        ),
       ),
     );
   }
 
   Widget socialButton(IconData icon, VoidCallback onPressed) {
-    return IconButton(
-      icon: FaIcon(icon, color: Colors.white, size: 32),
-      onPressed: onPressed,
+    // Enhanced social button with background
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(26),
+        shape: BoxShape.circle,
+      ),
+      child: IconButton(
+        icon: FaIcon(icon, color: Colors.white, size: 24),
+        onPressed: onPressed,
+        padding: const EdgeInsets.all(12),
+      ),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/gradient_scaffold.dart';
 
 class AppearanceDisplayPage extends StatefulWidget {
   const AppearanceDisplayPage({super.key});
@@ -12,14 +13,16 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(
         title: const Text('Appearance & Display',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.white)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -28,7 +31,11 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> {
           children: [
             const Text(
               'Customize Your Appearance',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18, 
+                fontWeight: FontWeight.bold,
+                color: Colors.white
+              ),
             ),
             const SizedBox(height: 16),
             const Text(

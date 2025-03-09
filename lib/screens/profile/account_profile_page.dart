@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/gradient_scaffold.dart';
 
 class AccountProfilePage extends StatefulWidget {
   const AccountProfilePage({super.key});
@@ -10,16 +11,16 @@ class AccountProfilePage extends StatefulWidget {
 class _AccountProfilePageState extends State<AccountProfilePage> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(
-        title: const Text(
-          'Account & Profile',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
-        ),
+        title: const Text('Account & Profile',
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: Colors.white)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

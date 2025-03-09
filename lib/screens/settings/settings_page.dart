@@ -8,6 +8,7 @@ import 'privacy_data_page.dart';
 import 'appearance_display_page.dart';
 import 'advanced_settings_page.dart';
 import '../support/about_support_page.dart';
+import '../../widgets/gradient_scaffold.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -69,11 +70,12 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     final filteredOptions = settingsOptions.where((option) =>
         option['title'].toString().toLowerCase().contains(_searchQuery.toLowerCase())).toList();
 
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(
-        title: const Text('Settings', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600)),
+        title: const Text('Settings', 
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: Colors.white)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, size: 26),
+          icon: const Icon(Icons.arrow_back, size: 26, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         elevation: 0,

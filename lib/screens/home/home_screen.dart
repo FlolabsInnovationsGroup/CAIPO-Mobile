@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import '../ai/openai_service.dart'; // Import OpenAI Service
 import '../../theme_provider.dart'; // Ensure theme switching works
+import '../../widgets/gradient_scaffold.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -57,24 +58,17 @@ class HomeScreenState extends State<HomeScreen> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
 
-    return Scaffold(
-      backgroundColor: isDarkMode ? Colors.black : Colors.white,
+    return GradientScaffold(
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(isDarkMode),
+            _buildHeader(context),
             Expanded(
               child: Container(
                 margin: const EdgeInsets.all(8.0),
                 padding: const EdgeInsets.all(8.0),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: isDarkMode
-                        ? [const Color(0xFF0A0F1F), const Color(0xFF152238)]
-                        : [const Color(0xFFE3E3E3), const Color(0xFFF5F5F5)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: isDarkMode ? const Color(0xFF1E1E2E) : Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
@@ -87,40 +81,7 @@ class HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Column(
                   children: [
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: _messages.length + (_isTyping ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == _messages.length && _isTyping) {
-                            return _typingIndicator();
-                          }
-                          final message = _messages[index];
-                          final isUser = message['sender'] == 'You';
-
-                          return Align(
-                            alignment:
-                                isUser ? Alignment.centerRight : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: isUser
-                                    ? Colors.blueAccent.withOpacity(0.9)
-                                    : const Color(0xFF1E1E2E),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Text(
-                                '${message['message']}',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: isUser ? Colors.white : Colors.grey[300],
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                    Expanded(child: _buildMessageList()),
                     _buildInputField(),
                   ],
                 ),
@@ -133,18 +94,15 @@ class HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHeader(bool isDarkMode) {
+  Widget _buildHeader(BuildContext context) {
+    // Use the theme provider's headerGradient instead of defining one here
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isDarkMode
-              ? [const Color(0xFF0A0F1F), const Color(0xFF152238)]
-              : [Colors.deepPurple, Colors.blueAccent],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: themeProvider.headerGradient,
       ),
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,10 +132,13 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBottomNavBar() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
+    
     return BottomNavigationBar(
-      backgroundColor: Colors.black,
-      selectedItemColor: Colors.white,
-      unselectedItemColor: Colors.grey,
+      backgroundColor: isDarkMode ? Colors.black : Colors.white,
+      selectedItemColor: Colors.blueAccent,
+      unselectedItemColor: isDarkMode ? Colors.grey : Colors.grey.shade600,
       currentIndex: 0,
       onTap: (index) {
         if (index == 1) {
@@ -192,6 +153,9 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildInputField() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
+    
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
@@ -199,18 +163,80 @@ class HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: TextField(
               controller: _messageController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: "Type a message...",
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                fillColor: isDarkMode ? Colors.grey.shade900 : Colors.grey.shade100,
+                filled: true,
+              ),
+              style: TextStyle(
+                color: isDarkMode ? Colors.white : Colors.black87,
               ),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.send, color: Colors.blueAccent, size: 28),
-            onPressed: _sendMessage,
+          const SizedBox(width: 8),
+          CircleAvatar(
+            backgroundColor: Colors.blueAccent,
+            radius: 24,
+            child: IconButton(
+              icon: const Icon(Icons.send, color: Colors.white, size: 22),
+              onPressed: _sendMessage,
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMessageList() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
+    
+    return ListView.builder(
+      itemCount: _messages.length + (_isTyping ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index == _messages.length && _isTyping) {
+          return _typingIndicator();
+        }
+        final message = _messages[index];
+        final isUser = message['sender'] == 'You';
+
+        return Align(
+          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isUser
+                  ? Colors.blueAccent
+                  : isDarkMode 
+                      ? const Color(0xFF1E1E2E) 
+                      : Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 3,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+            ),
+            child: Text(
+              '${message['message']}',
+              style: TextStyle(
+                fontSize: 16,
+                color: isUser 
+                    ? Colors.white 
+                    : isDarkMode 
+                        ? Colors.grey[300] 
+                        : Colors.black87,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
