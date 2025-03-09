@@ -125,4 +125,49 @@ class ThemeProvider extends ChangeNotifier {
     _themeMode = mode;
     notifyListeners();
   }
+
+  Color getIconColor(BuildContext context) {
+    return _themeMode == ThemeMode.dark 
+        ? Colors.white 
+        : Colors.black87;
+  }
+
+  Color getTextColor(BuildContext context) {
+    return _themeMode == ThemeMode.dark 
+        ? Colors.white 
+        : Colors.black87;
+  }
+
+  Color get cardBackground {
+    return _themeMode == ThemeMode.dark 
+        ? Colors.black.withOpacity(0.7) 
+        : Colors.white.withOpacity(0.9);
+  }
+
+  TextStyle get headlineStyle {
+    return TextStyle(
+      color: _themeMode == ThemeMode.dark ? Colors.white : Colors.black87,
+      fontSize: 22,
+      fontWeight: FontWeight.bold,
+    );
+  }
+
+  TextStyle get bodyTextStyle {
+    return TextStyle(
+      color: _themeMode == ThemeMode.dark ? Colors.white70 : Colors.black87,
+      fontSize: 16,
+    );
+  }
+
+  Color get inputBackgroundColor {
+    return _themeMode == ThemeMode.dark 
+        ? Colors.grey.shade800 
+        : Colors.grey.shade200;
+  }
+
+  Color get inputTextColor {
+    return _themeMode == ThemeMode.dark 
+        ? Colors.white 
+        : Colors.black87;
+  }
 }

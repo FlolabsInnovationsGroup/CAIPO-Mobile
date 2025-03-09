@@ -136,7 +136,11 @@ class AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMi
                 const SizedBox(height: 16),
                 Text(
                   isSignUp ? 'Create Account' : 'Log In',
-                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(
+                    fontSize: 28, 
+                    fontWeight: FontWeight.bold, 
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
                 ),
                 const SizedBox(height: 20),
 
@@ -169,10 +173,17 @@ class AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMi
                           setState(() => agreeToTerms = value!);
                         },
                         checkColor: Colors.white,
-                        activeColor: Colors.blueAccent,
+                        activeColor: Colors.blueAccent.withOpacity(isDarkMode ? 0.8 : 1.0),
                       ),
-                      const Expanded(
-                        child: Text('I agree to the Terms & Privacy Policy', style: TextStyle(color: Colors.white70)),
+                      Expanded(
+                        child: Text(
+                          'I agree to the Terms & Privacy Policy',
+                          style: TextStyle(
+                            color: isDarkMode 
+                                ? Colors.grey.shade300 
+                                : Colors.grey.shade700,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -183,19 +194,37 @@ class AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMi
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    backgroundColor: Colors.blueAccent,
-                    elevation: 4,
-                    shadowColor: Colors.blue.withAlpha(102),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)
+                    ),
+                    backgroundColor: Colors.blueAccent.withOpacity(
+                      isDarkMode ? 0.8 : 1.0
+                    ),
+                    elevation: isDarkMode ? 2 : 4,
+                    shadowColor: Colors.blue.withAlpha(isDarkMode ? 77 : 102),
                   ),
                   child: isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : Text(isSignUp ? 'Sign Up' : 'Login',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                      : Text(
+                          isSignUp ? 'Sign Up' : 'Login',
+                          style: const TextStyle(
+                            fontSize: 18, 
+                            fontWeight: FontWeight.bold, 
+                            color: Colors.white
+                          ),
+                        ),
                 ),
                 const SizedBox(height: 24),
 
-                const Text('Or sign in with', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                Text(
+                  'Or sign in with', 
+                  style: TextStyle(
+                    color: isDarkMode 
+                        ? Colors.grey.shade300 
+                        : Colors.grey.shade700, 
+                    fontSize: 16
+                  ),
+                ),
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -231,13 +260,22 @@ class AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMi
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(isSignUp ? 'Already have an account?' : 'Don\'t have an account?',
-                        style: const TextStyle(color: Colors.white70)),
+                    Text(
+                      isSignUp ? 'Already have an account?' : 'Don\'t have an account?',
+                      style: TextStyle(
+                        color: isDarkMode 
+                            ? Colors.grey.shade300 
+                            : Colors.grey.shade700,
+                      ),
+                    ),
                     TextButton(
                       onPressed: () => setState(() => isSignUp = !isSignUp),
-                      child: Text(isSignUp ? 'Log In' : 'Sign Up', 
-                        style: const TextStyle(
-                          color: Colors.blueAccent,
+                      child: Text(
+                        isSignUp ? 'Log In' : 'Sign Up',
+                        style: TextStyle(
+                          color: Colors.blueAccent.withOpacity(
+                            isDarkMode ? 0.8 : 1.0
+                          ),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -252,25 +290,61 @@ class AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMi
     );
   }
 
-  Widget buildInputField({required TextEditingController controller, required String hintText, required IconData icon, bool obscureText = false}) {
-    // Using theme provider would make inputs adapt to light/dark theme
+  Widget buildInputField({
+    required TextEditingController controller, 
+    required String hintText, 
+    required IconData icon, 
+    bool obscureText = false
+  }) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
+
     return TextField(
       controller: controller,
       obscureText: obscureText,
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(
+        color: isDarkMode ? Colors.white : Colors.black87,
+        fontSize: 16,
+      ),
       decoration: InputDecoration(
         filled: true,
-        fillColor: Colors.white24,
+        fillColor: isDarkMode 
+            ? Colors.black.withOpacity(0.3) 
+            : Colors.white.withOpacity(0.9),
         hintText: hintText,
-        hintStyle: const TextStyle(color: Colors.white54),
-        prefixIcon: Icon(icon, color: Colors.white70),
+        hintStyle: TextStyle(
+          color: isDarkMode 
+              ? Colors.grey.shade400 
+              : Colors.grey.shade600,
+        ),
+        prefixIcon: Icon(
+          icon, 
+          color: isDarkMode 
+              ? Colors.grey.shade300 
+              : Colors.grey.shade700,
+        ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12), 
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isDarkMode 
+                ? Colors.grey.shade800 
+                : Colors.grey.shade300,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isDarkMode 
+                ? Colors.grey.shade800 
+                : Colors.grey.shade300,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.blueAccent, width: 2),
+          borderSide: BorderSide(
+            color: Colors.blueAccent.withOpacity(isDarkMode ? 0.7 : 1.0),
+            width: 2,
+          ),
         ),
         contentPadding: const EdgeInsets.symmetric(vertical: 16),
       ),
@@ -278,13 +352,32 @@ class AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMi
   }
 
   Widget socialButton(IconData icon, VoidCallback onPressed) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withAlpha(26),
+        color: isDarkMode 
+            ? Colors.white.withOpacity(0.1) 
+            : Colors.grey.shade200,
         shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: isDarkMode 
+                ? Colors.black.withOpacity(0.2) 
+                : Colors.grey.withOpacity(0.3),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: IconButton(
-        icon: FaIcon(icon, color: Colors.white, size: 24),
+        icon: FaIcon(
+          icon, 
+          color: isDarkMode ? Colors.white : Colors.black87, 
+          size: 24
+        ),
         onPressed: onPressed,
         padding: const EdgeInsets.all(12),
       ),

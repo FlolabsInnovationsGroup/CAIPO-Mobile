@@ -68,11 +68,15 @@ class HomeScreenState extends State<HomeScreen> {
                 margin: const EdgeInsets.all(8.0),
                 padding: const EdgeInsets.all(8.0),
                 decoration: BoxDecoration(
-                  color: isDarkMode ? const Color(0xFF1E1E2E) : Colors.white,
+                  color: isDarkMode 
+                      ? Colors.black.withOpacity(0.4) 
+                      : Colors.white.withOpacity(0.9),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: isDarkMode ? Colors.black54 : Colors.grey.shade300,
+                      color: isDarkMode 
+                          ? Colors.black12 
+                          : Colors.grey.shade300,
                       spreadRadius: 2,
                       blurRadius: 5,
                       offset: const Offset(0, 3),
@@ -122,10 +126,14 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _typingIndicator() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 8.0),
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: SpinKitThreeBounce(
-        color: Colors.blueAccent,
+        color: isDarkMode 
+            ? Colors.blueAccent.withOpacity(0.7) 
+            : Colors.blueAccent,
         size: 20.0,
       ),
     );
@@ -136,9 +144,13 @@ class HomeScreenState extends State<HomeScreen> {
     final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
     
     return BottomNavigationBar(
-      backgroundColor: isDarkMode ? Colors.black : Colors.white,
-      selectedItemColor: Colors.blueAccent,
-      unselectedItemColor: isDarkMode ? Colors.grey : Colors.grey.shade600,
+      backgroundColor: isDarkMode 
+          ? Colors.black.withOpacity(0.8) 
+          : Colors.white,
+      selectedItemColor: Colors.blueAccent.withOpacity(isDarkMode ? 0.9 : 1.0),
+      unselectedItemColor: isDarkMode 
+          ? Colors.grey.shade500 
+          : Colors.grey.shade600,
       currentIndex: 0,
       onTap: (index) {
         if (index == 1) {
@@ -165,10 +177,36 @@ class HomeScreenState extends State<HomeScreen> {
               controller: _messageController,
               decoration: InputDecoration(
                 hintText: "Type a message...",
+                hintStyle: TextStyle(
+                  color: isDarkMode 
+                      ? Colors.grey.shade400 
+                      : Colors.grey.shade600,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(
+                    color: isDarkMode 
+                        ? Colors.grey.shade800 
+                        : Colors.grey.shade300,
+                  ),
                 ),
-                fillColor: isDarkMode ? Colors.grey.shade900 : Colors.grey.shade100,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(
+                    color: isDarkMode 
+                        ? Colors.grey.shade800 
+                        : Colors.grey.shade300,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(
+                    color: Colors.blueAccent.withOpacity(isDarkMode ? 0.7 : 1.0),
+                  ),
+                ),
+                fillColor: isDarkMode 
+                    ? Colors.grey.shade900 
+                    : Colors.grey.shade100,
                 filled: true,
               ),
               style: TextStyle(
@@ -178,7 +216,7 @@ class HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(width: 8),
           CircleAvatar(
-            backgroundColor: Colors.blueAccent,
+            backgroundColor: Colors.blueAccent.withOpacity(isDarkMode ? 0.8 : 1.0),
             radius: 24,
             child: IconButton(
               icon: const Icon(Icons.send, color: Colors.white, size: 22),
@@ -207,12 +245,12 @@ class HomeScreenState extends State<HomeScreen> {
           alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
           child: Container(
             margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: isUser
-                  ? Colors.blueAccent
+                  ? Colors.blueAccent.withOpacity(isDarkMode ? 0.8 : 1.0)
                   : isDarkMode 
-                      ? const Color(0xFF1E1E2E) 
+                      ? Colors.grey.shade900 
                       : Colors.grey.shade200,
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
@@ -230,7 +268,7 @@ class HomeScreenState extends State<HomeScreen> {
                 color: isUser 
                     ? Colors.white 
                     : isDarkMode 
-                        ? Colors.grey[300] 
+                        ? Colors.grey.shade100 
                         : Colors.black87,
               ),
             ),

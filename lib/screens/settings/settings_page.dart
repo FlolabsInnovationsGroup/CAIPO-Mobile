@@ -44,6 +44,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
 
     final List<Map<String, dynamic>> settingsOptions = [
       {'title': 'Account & Profile', 'icon': Icons.person, 'page': const AccountProfilePage()},
@@ -72,10 +73,20 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
 
     return GradientScaffold(
       appBar: AppBar(
-        title: const Text('Settings', 
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: Colors.white)),
+        title: Text(
+          'Settings', 
+          style: TextStyle(
+            fontSize: 22, 
+            fontWeight: FontWeight.w600, 
+            color: isDarkMode ? Colors.white : Colors.black87,
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, size: 26, color: Colors.white),
+          icon: Icon(
+            Icons.arrow_back, 
+            size: 26, 
+            color: isDarkMode ? Colors.white : Colors.black87,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         elevation: 0,
@@ -89,15 +100,47 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
               padding: const EdgeInsets.all(12.0),
               child: TextField(
                 controller: _searchController,
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white : Colors.black87,
+                ),
                 decoration: InputDecoration(
                   hintText: 'Search settings...',
-                  hintStyle: TextStyle(color: Colors.grey.shade600),
+                  hintStyle: TextStyle(
+                    color: isDarkMode 
+                        ? Colors.grey.shade400 
+                        : Colors.grey.shade600,
+                  ),
                   filled: true,
-                  fillColor: Colors.grey.shade200,
-                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                  fillColor: isDarkMode 
+                      ? Colors.black.withOpacity(0.3) 
+                      : Colors.grey.shade200,
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: isDarkMode 
+                        ? Colors.grey.shade400 
+                        : Colors.grey.shade600,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: isDarkMode 
+                          ? Colors.grey.shade800 
+                          : Colors.grey.shade300,
+                      width: 1,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: Colors.blueAccent.withOpacity(
+                        isDarkMode ? 0.7 : 1.0
+                      ),
+                      width: 2,
+                    ),
                   ),
                 ),
                 onChanged: (value) {
@@ -111,18 +154,50 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                 itemBuilder: (context, index) {
                   final option = filteredOptions[index];
                   return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 12, 
+                      vertical: 6
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)
+                    ),
+                    color: isDarkMode 
+                        ? Colors.black.withOpacity(0.3) 
+                        : Colors.white,
+                    elevation: isDarkMode ? 0 : 1,
                     child: ListTile(
-                      leading: Icon(option['icon'], size: 28, color: Colors.blueAccent),
-                      title: Text(option['title'], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                      leading: Icon(
+                        option['icon'],
+                        size: 28,
+                        color: isDarkMode 
+                            ? Colors.blueAccent.shade100 
+                            : Colors.blueAccent,
+                      ),
+                      title: Text(
+                        option['title'],
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: isDarkMode 
+                              ? Colors.white 
+                              : Colors.black87,
+                        ),
+                      ),
                       trailing: option.containsKey('widget')
                           ? option['widget']
-                          : const Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey),
+                          : Icon(
+                              Icons.arrow_forward_ios,
+                              size: 18,
+                              color: isDarkMode 
+                                  ? Colors.grey.shade400 
+                                  : Colors.grey.shade600,
+                            ),
                       onTap: option['page'] != null
                           ? () => Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => option['page']),
+                                MaterialPageRoute(
+                                  builder: (context) => option['page']
+                                ),
                               )
                           : null,
                     ),
