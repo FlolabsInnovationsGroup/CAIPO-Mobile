@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/gradient_scaffold.dart';
 
 class AIPreferencesPage extends StatefulWidget {
   const AIPreferencesPage({super.key});
@@ -14,7 +15,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(
         title: const Text('AI Preferences',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
@@ -22,6 +23,8 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -30,7 +33,11 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> {
           children: [
             const Text(
               'Customize AI Interaction',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18, 
+                fontWeight: FontWeight.bold,
+                color: Colors.white, // Added for better visibility on gradient
+              ),
             ),
             const SizedBox(height: 12),
             _buildSwitchTile(
@@ -46,7 +53,11 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> {
             const SizedBox(height: 16),
             const Text(
               'Response Speed',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                fontSize: 16, 
+                fontWeight: FontWeight.w500,
+                color: Colors.white, // Added for better visibility on gradient
+              ),
             ),
             Slider(
               value: responseSpeed,

@@ -33,10 +33,48 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'CAIPO App',
-      theme: ThemeData.light(),
-      darkTheme: ThemeData.dark(),
-      themeMode: Provider.of<ThemeProvider>(context).themeMode, // Theme switching
-      initialRoute: '/', // Start with Welcome Screen
+      theme: ThemeData.light().copyWith(
+        scaffoldBackgroundColor: Colors.transparent,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: IconThemeData(color: Colors.white),
+          titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        cardTheme: CardTheme(
+          color: Colors.white.withOpacity(0.9),
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      darkTheme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: Colors.transparent,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          iconTheme: IconThemeData(color: Colors.white),
+          titleTextStyle: TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        cardTheme: CardTheme(
+          color: Colors.black.withOpacity(0.7),
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+      themeMode: Provider.of<ThemeProvider>(context).themeMode,
+      initialRoute: '/',
       routes: {
         '/': (context) => const WelcomeScreen(),
         '/auth': (context) => const AuthScreen(),
