@@ -112,7 +112,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   ),
                   filled: true,
                   fillColor: isDarkMode 
-                      ? Colors.black.withOpacity(0.3) 
+                      ? Colors.black.withAlpha(77) // 0.3 * 255 ≈ 77
                       : Colors.grey.shade200,
                   prefixIcon: Icon(
                     Icons.search,
@@ -136,9 +136,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: Colors.blueAccent.withOpacity(
-                        isDarkMode ? 0.7 : 1.0
-                      ),
+                      color: Colors.blueAccent.withAlpha(isDarkMode ? 179 : 255), // 0.7 or 1.0 * 255
                       width: 2,
                     ),
                   ),
@@ -153,53 +151,57 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                 itemCount: filteredOptions.length,
                 itemBuilder: (context, index) {
                   final option = filteredOptions[index];
-                  return Card(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 12, 
-                      vertical: 6
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)
-                    ),
-                    color: isDarkMode 
-                        ? Colors.black.withOpacity(0.3) 
-                        : Colors.white,
-                    elevation: isDarkMode ? 0 : 1,
-                    child: ListTile(
-                      leading: Icon(
-                        option['icon'],
-                        size: 28,
-                        color: isDarkMode 
-                            ? Colors.blueAccent.shade100 
-                            : Colors.blueAccent,
+                  return Semantics(
+                    button: true,
+                    label: 'Settings option for ${option['title']}',
+                    child: Card(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 12, 
+                        vertical: 6
                       ),
-                      title: Text(
-                        option['title'],
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)
+                      ),
+                      color: isDarkMode 
+                          ? Colors.black.withAlpha(77) // 0.3 * 255 ≈ 77
+                          : Colors.white,
+                      elevation: isDarkMode ? 0 : 1,
+                      child: ListTile(
+                        leading: Icon(
+                          option['icon'],
+                          size: 28,
                           color: isDarkMode 
-                              ? Colors.white 
-                              : Colors.black87,
+                              ? Colors.blueAccent.shade100 
+                              : Colors.blueAccent,
                         ),
+                        title: Text(
+                          option['title'],
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: isDarkMode 
+                                ? Colors.white 
+                                : Colors.black87,
+                          ),
+                        ),
+                        trailing: option.containsKey('widget')
+                            ? option['widget']
+                            : Icon(
+                                Icons.arrow_forward_ios,
+                                size: 18,
+                                color: isDarkMode 
+                                    ? Colors.grey.shade400 
+                                    : Colors.grey.shade600,
+                              ),
+                        onTap: option['page'] != null
+                            ? () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => option['page']
+                                  ),
+                                )
+                            : null,
                       ),
-                      trailing: option.containsKey('widget')
-                          ? option['widget']
-                          : Icon(
-                              Icons.arrow_forward_ios,
-                              size: 18,
-                              color: isDarkMode 
-                                  ? Colors.grey.shade400 
-                                  : Colors.grey.shade600,
-                            ),
-                      onTap: option['page'] != null
-                          ? () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => option['page']
-                                ),
-                              )
-                          : null,
                     ),
                   );
                 },

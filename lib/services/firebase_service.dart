@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -18,13 +19,13 @@ class FirebaseService {
           options: DefaultFirebaseOptions.currentPlatform,
         );
         _initialized = true;
-        print("Firebase initialized successfully for ${_getPlatformName()}");
+        developer.log("Firebase initialized successfully", name: "FirebaseService", error: _getPlatformName());
       } catch (e) {
-        print("Failed to initialize Firebase for ${_getPlatformName()}: $e");
+        developer.log("Failed to initialize Firebase", name: "FirebaseService", error: "${_getPlatformName()}: $e");
         // We'll still continue, but with degraded functionality
       }
     } else {
-      print("Firebase not fully supported on ${_getPlatformName()}, using alternative implementations");
+      developer.log("Firebase not fully supported", name: "FirebaseService", error: "${_getPlatformName()}, using alternative implementations");
     }
   }
   
@@ -83,7 +84,7 @@ class FirebaseService {
         password: password,
       );
     } catch (e) {
-      print('Error signing in with email: $e');
+      developer.log('Error signing in with email', name: "FirebaseService", error: "$e");
       return null;
     }
   }
@@ -122,7 +123,7 @@ class FirebaseService {
       
       return userCredential;
     } catch (e) {
-      print('Error creating user: $e');
+      developer.log('Error creating user', name: "FirebaseService", error: "$e");
       return null;
     }
   }
@@ -143,7 +144,7 @@ class FirebaseService {
       
       return await FirebaseAuth.instance.signInWithCredential(credential);
     } catch (e) {
-      print('Error signing in with Google: $e');
+      developer.log('Error signing in with Google', name: "FirebaseService", error: "$e");
       return null;
     }
   }
@@ -155,7 +156,7 @@ class FirebaseService {
       // Also sign out from Google if using Google Sign-In
       await GoogleSignIn().signOut();
     } catch (e) {
-      print('Error signing out: $e');
+      developer.log('Error signing out', name: "FirebaseService", error: "$e");
     }
   }
   
@@ -173,7 +174,7 @@ class FirebaseService {
         SetOptions(merge: true),
       );
     } catch (e) {
-      print('Error saving user data: $e');
+      developer.log('Error saving user data', name: "FirebaseService", error: "$e");
     }
   }
   
@@ -183,7 +184,7 @@ class FirebaseService {
       final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
       return doc.data();
     } catch (e) {
-      print('Error getting user data: $e');
+      developer.log('Error getting user data', name: "FirebaseService", error: "$e");
       return null;
     }
   }
@@ -202,7 +203,7 @@ class FirebaseService {
       await ref.putData(Uint8List.fromList(bytes), metadata);
       return await ref.getDownloadURL();
     } catch (e) {
-      print('Error uploading file: $e');
+      developer.log('Error uploading file', name: "FirebaseService", error: "$e");
       return null;
     }
   }
@@ -214,7 +215,7 @@ class FirebaseService {
       final bytes = await ref.getData();
       return bytes;
     } catch (e) {
-      print('Error downloading file: $e');
+      developer.log('Error downloading file', name: "FirebaseService", error: "$e");
       return null;
     }
   }

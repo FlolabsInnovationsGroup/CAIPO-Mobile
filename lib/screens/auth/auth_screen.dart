@@ -173,7 +173,7 @@ class AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMi
                           setState(() => agreeToTerms = value!);
                         },
                         checkColor: Colors.white,
-                        activeColor: Colors.blueAccent.withOpacity(isDarkMode ? 0.8 : 1.0),
+                        activeColor: Colors.blueAccent.withAlpha(isDarkMode ? 204 : 255),
                       ),
                       Expanded(
                         child: Text(
@@ -197,9 +197,7 @@ class AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMi
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)
                     ),
-                    backgroundColor: Colors.blueAccent.withOpacity(
-                      isDarkMode ? 0.8 : 1.0
-                    ),
+                    backgroundColor: Colors.blueAccent.withAlpha(isDarkMode ? 204 : 255),
                     elevation: isDarkMode ? 2 : 4,
                     shadowColor: Colors.blue.withAlpha(isDarkMode ? 77 : 102),
                   ),
@@ -273,9 +271,7 @@ class AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMi
                       child: Text(
                         isSignUp ? 'Log In' : 'Sign Up',
                         style: TextStyle(
-                          color: Colors.blueAccent.withOpacity(
-                            isDarkMode ? 0.8 : 1.0
-                          ),
+                          color: Colors.blueAccent.withAlpha(isDarkMode ? 204 : 255),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -309,8 +305,8 @@ class AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMi
       decoration: InputDecoration(
         filled: true,
         fillColor: isDarkMode 
-            ? Colors.black.withOpacity(0.3) 
-            : Colors.white.withOpacity(0.9),
+            ? Colors.black.withAlpha(77)
+            : Colors.white.withAlpha(230),
         hintText: hintText,
         hintStyle: TextStyle(
           color: isDarkMode 
@@ -342,7 +338,7 @@ class AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMi
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
-            color: Colors.blueAccent.withOpacity(isDarkMode ? 0.7 : 1.0),
+            color: Colors.blueAccent.withAlpha(isDarkMode ? 179 : 255),
             width: 2,
           ),
         ),
@@ -358,14 +354,14 @@ class AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMi
     return Container(
       decoration: BoxDecoration(
         color: isDarkMode 
-            ? Colors.white.withOpacity(0.1) 
+            ? Colors.white.withAlpha(26)
             : Colors.grey.shade200,
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
             color: isDarkMode 
-                ? Colors.black.withOpacity(0.2) 
-                : Colors.grey.withOpacity(0.3),
+                ? Colors.black.withAlpha(51)
+                : Colors.grey.withAlpha(77),
             spreadRadius: 1,
             blurRadius: 4,
             offset: const Offset(0, 2),

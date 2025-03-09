@@ -119,9 +119,7 @@ class WelcomeScreenState extends State<WelcomeScreen>
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent.withOpacity(
-                        isDarkMode ? 0.8 : 1.0
-                      ),
+                      backgroundColor: Colors.blueAccent.withAlpha(isDarkMode ? 204 : 255),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -131,9 +129,7 @@ class WelcomeScreenState extends State<WelcomeScreen>
                     child: Text(
                       'LOG IN',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(
-                          isDarkMode ? 0.95 : 1.0
-                        ),
+                        color: Colors.white.withAlpha(isDarkMode ? 242 : 255),
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.2,
@@ -163,8 +159,8 @@ class WelcomeScreenState extends State<WelcomeScreen>
                     ),
                     backgroundColor: Colors.transparent,
                     foregroundColor: isDarkMode 
-                        ? Colors.white.withOpacity(0.8) 
-                        : Colors.black87.withOpacity(0.7),
+                        ? Colors.white.withAlpha(204)
+                        : Colors.black87.withAlpha(179),
                     shadowColor: Colors.transparent,
                   ),
                   child: Text(

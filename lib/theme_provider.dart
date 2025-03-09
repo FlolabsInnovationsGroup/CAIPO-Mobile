@@ -4,6 +4,15 @@ class ThemeProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.dark; // Default is dark mode
   bool _usePurpleGradient = true; // Control which gradient to use in dark mode
 
+  // Add animation duration preference
+  Duration _animationDuration = Duration(milliseconds: 300);
+  
+  // Add font family option
+  String _fontFamily = 'Roboto';
+  
+  // Add accent color choice
+  Color _accentColor = Colors.blueAccent;
+
   ThemeMode get themeMode => _themeMode;
   bool get usePurpleGradient => _usePurpleGradient;
 
@@ -140,8 +149,8 @@ class ThemeProvider extends ChangeNotifier {
 
   Color get cardBackground {
     return _themeMode == ThemeMode.dark 
-        ? Colors.black.withOpacity(0.7) 
-        : Colors.white.withOpacity(0.9);
+        ? Colors.black.withAlpha(179) // 0.7 * 255 ≈ 179
+        : Colors.white.withAlpha(230); // 0.9 * 255 ≈ 230
   }
 
   TextStyle get headlineStyle {
