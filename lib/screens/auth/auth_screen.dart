@@ -15,7 +15,7 @@ class AuthScreen extends StatefulWidget {
   AuthScreenState createState() => AuthScreenState();
 }
 
-class AuthScreenState extends State<AuthScreen> {
+class AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMixin {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController firstNameController = TextEditingController();
@@ -24,11 +24,38 @@ class AuthScreenState extends State<AuthScreen> {
   bool isSignUp = false;
   bool isLoading = false;
   bool agreeToTerms = false;
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  bool isPasswordVisible = false;
+  String? emailError;
+  String? passwordError;
+  late AnimationController _animationController;
+  late Animation<double> _fadeInAnimation;
+  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
     isSignUp = widget.signUpMode;
+    
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    
+    _fadeInAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeIn,
+    );
+    
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOut,
+    ));
+    
+    _animationController.forward();
   }
 
   void handleAuth() async {
@@ -115,113 +142,151 @@ class AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Email is required';
+    }
+    
+    final emailPattern = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailPattern.hasMatch(value)) {
+      return 'Enter a valid email address';
+    }
+    
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
 
     return GradientScaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset('assets/logo.png', height: 80),
-              const SizedBox(height: 16),
-              Text(
-                isSignUp ? 'Create Account' : 'Log In',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: isDarkMode ? Colors.white : Colors.black87,
+      body: Form(
+        key: _formKey,
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: FadeTransition(
+              opacity: _fadeInAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset('assets/logo.png', height: 80),
+                    const SizedBox(height: 16),
+                    Text(
+                      isSignUp ? 'Create Account' : 'Log In',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    if (isSignUp) ...[
+                      buildInputField(controller: firstNameController, hintText: 'First Name', icon: Icons.person),
+                      const SizedBox(height: 12),
+                      buildInputField(controller: lastNameController, hintText: 'Last Name', icon: Icons.person),
+                      const SizedBox(height: 12),
+                    ],
+
+                    buildInputField(controller: emailController, hintText: 'Enter your email', icon: Icons.email, error: emailError),
+                    const SizedBox(height: 12),
+
+                    buildInputField(controller: passwordController, hintText: 'Enter password', icon: Icons.lock, obscureText: !isPasswordVisible, suffixIcon: IconButton(
+                      icon: Icon(isPasswordVisible ? Icons.visibility : Icons.visibility_off),
+                      onPressed: () => setState(() => isPasswordVisible = !isPasswordVisible),
+                    )),
+                    const SizedBox(height: 12),
+
+                    ElevatedButton(
+                      onPressed: isLoading ? null : handleAuth,
+                      child: isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(isSignUp ? 'Sign Up' : 'Login'),
+                    ),
+                    const SizedBox(height: 24),
+
+                    Text('Or sign in with', style: TextStyle(color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700, fontSize: 16)),
+                    const SizedBox(height: 12),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        socialButton(FontAwesomeIcons.google, handleGoogleSignIn),
+                        const SizedBox(width: 16),
+                        socialButton(FontAwesomeIcons.apple, () {
+                          // TODO: Implement Apple sign in
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Apple sign-in coming soon')),
+                          );
+                        }),
+                        const SizedBox(width: 16),
+                        socialButton(FontAwesomeIcons.facebook, () {
+                          // TODO: Implement Facebook sign in
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Facebook sign-in coming soon')),
+                          );
+                        }),
+                        const SizedBox(width: 16),
+                        socialButton(FontAwesomeIcons.linkedin, () {
+                          // TODO: Implement LinkedIn sign in
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('LinkedIn sign-in coming soon')),
+                          );
+                        }),
+                      ],
+                    ),
+                    const SizedBox(height: 30),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          isSignUp ? 'Already have an account?' : 'Don\'t have an account?',
+                          style: TextStyle(color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700),
+                        ),
+                        TextButton(
+                          onPressed: () => setState(() => isSignUp = !isSignUp),
+                          child: Text(
+                            isSignUp ? 'Log In' : 'Sign Up',
+                            style: TextStyle(color: Colors.blueAccent.withAlpha(isDarkMode ? 204 : 255), fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 20),
-
-              if (isSignUp) ...[
-                buildInputField(controller: firstNameController, hintText: 'First Name', icon: Icons.person),
-                const SizedBox(height: 12),
-                buildInputField(controller: lastNameController, hintText: 'Last Name', icon: Icons.person),
-                const SizedBox(height: 12),
-              ],
-
-              buildInputField(controller: emailController, hintText: 'Enter your email', icon: Icons.email),
-              const SizedBox(height: 12),
-
-              buildInputField(controller: passwordController, hintText: 'Enter password', icon: Icons.lock, obscureText: true),
-              const SizedBox(height: 12),
-
-              ElevatedButton(
-                onPressed: isLoading ? null : handleAuth,
-                child: isLoading ? const CircularProgressIndicator(color: Colors.white) : Text(isSignUp ? 'Sign Up' : 'Login'),
-              ),
-              const SizedBox(height: 24),
-
-              Text('Or sign in with', style: TextStyle(color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700, fontSize: 16)),
-              const SizedBox(height: 12),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  socialButton(FontAwesomeIcons.google, handleGoogleSignIn),
-                  const SizedBox(width: 16),
-                  socialButton(FontAwesomeIcons.apple, () {
-                    // TODO: Implement Apple sign in
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Apple sign-in coming soon')),
-                    );
-                  }),
-                  const SizedBox(width: 16),
-                  socialButton(FontAwesomeIcons.facebook, () {
-                    // TODO: Implement Facebook sign in
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Facebook sign-in coming soon')),
-                    );
-                  }),
-                  const SizedBox(width: 16),
-                  socialButton(FontAwesomeIcons.linkedin, () {
-                    // TODO: Implement LinkedIn sign in
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('LinkedIn sign-in coming soon')),
-                    );
-                  }),
-                ],
-              ),
-              const SizedBox(height: 30),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    isSignUp ? 'Already have an account?' : 'Don\'t have an account?',
-                    style: TextStyle(color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700),
-                  ),
-                  TextButton(
-                    onPressed: () => setState(() => isSignUp = !isSignUp),
-                    child: Text(
-                      isSignUp ? 'Log In' : 'Sign Up',
-                      style: TextStyle(color: Colors.blueAccent.withAlpha(isDarkMode ? 204 : 255), fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget buildInputField({required TextEditingController controller, required String hintText, required IconData icon, bool obscureText = false}) {
-    return TextField(
+  Widget buildInputField({
+    required TextEditingController controller,
+    required String hintText,
+    required IconData icon,
+    String? error,
+    bool obscureText = false,
+    Widget? suffixIcon,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
       controller: controller,
       obscureText: obscureText,
       decoration: InputDecoration(
         hintText: hintText,
         prefixIcon: Icon(icon),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        errorText: error,
+        suffixIcon: suffixIcon,
       ),
+      keyboardType: keyboardType,
+      validator: validator,
     );
   }
 
@@ -237,5 +302,16 @@ class AuthScreenState extends State<AuthScreen> {
         padding: const EdgeInsets.all(12),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    firstNameController.dispose();
+    lastNameController.dispose();
+    dobController.dispose();
+    super.dispose();
   }
 }
