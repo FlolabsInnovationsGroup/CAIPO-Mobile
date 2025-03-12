@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../theme_provider.dart';
 import '../../widgets/gradient_scaffold.dart';
 import 'dart:math';
+import 'dart:async';
 
 class AdvancedSettingsPage extends StatefulWidget {
   const AdvancedSettingsPage({super.key});
@@ -12,27 +13,144 @@ class AdvancedSettingsPage extends StatefulWidget {
 }
 
 class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with SingleTickerProviderStateMixin {
-  bool developerMode = false;
-  bool betaFeatures = false;
-  bool enableLogs = false;
-  bool experimentalAI = false;
-  bool cachingEnabled = true;
-  bool powerSavingMode = false;
+  // Settings values
+  Map<String, Map<String, dynamic>> _settings = {
+    'Developer Options': {
+      'Enable Developer Mode': {
+        'value': false,
+        'icon': Icons.developer_mode,
+        'description': 'Access debugging tools and experimental features.',
+        'details': 'Activates additional menus and options for development purposes. Not recommended for regular users.'
+      },
+      'Enable Beta Features': {
+        'value': false,
+        'icon': Icons.new_releases,
+        'description': 'Try out upcoming features before they are released.',
+        'details': 'Enables access to beta features which may not be fully stable. Requires app restart.',
+        'requiresRestart': true
+      },
+      'Experimental AI Models': {
+        'value': false,
+        'icon': Icons.psychology,
+        'description': 'Use cutting-edge AI models that are still in development.',
+        'details': 'Enables access to the latest experimental AI models. May affect performance and accuracy. Requires app restart.',
+        'requiresRestart': true
+      },
+      'API Access': {
+        'value': false,
+        'icon': Icons.api,
+        'description': 'Enable direct API access for custom integrations.',
+        'details': 'Provides access to the API configuration and token management for external integrations.'
+      },
+    },
+    'Performance Options': {
+      'Background Processing': {
+        'value': true,
+        'icon': Icons.all_inclusive,
+        'description': 'Allow the app to process data in the background.',
+        'details': 'Enables the app to continue processing tasks when minimized or when the screen is off. Disabling may save battery.'
+      },
+      'Enable Caching': {
+        'value': true,
+        'icon': Icons.cached,
+        'description': 'Store temporary data to improve performance.',
+        'details': 'Caches data to disk to improve load times and reduce network usage. Disabling will free up storage space but may slow down the app.'
+      },
+      'High Performance Mode': {
+        'value': false,
+        'icon': Icons.speed,
+        'description': 'Optimize for maximum performance at the expense of battery life.',
+        'details': 'Uses more system resources to deliver the best possible performance. May significantly increase battery usage.'
+      },
+      'Offline Mode': {
+        'value': false,
+        'icon': Icons.wifi_off,
+        'description': 'Work without an internet connection using cached data.',
+        'details': 'Disables network requests and operates using only locally cached data. Limited functionality available.'
+      },
+    },
+    'Debugging Options': {
+      'Enable Debug Logs': {
+        'value': false,
+        'icon': Icons.subject,
+        'description': 'Log errors and diagnostic information for troubleshooting.',
+        'details': 'Records detailed application logs which can help identify and fix issues. May affect performance slightly.'
+      },
+      'Crash Reporting': {
+        'value': true,
+        'icon': Icons.report_problem,
+        'description': 'Automatically send crash reports to help improve stability.',
+        'details': 'Sends anonymous crash reports to our servers to help identify and fix issues. No personal data is included.'
+      },
+      'Extended Error Details': {
+        'value': false,
+        'icon': Icons.bug_report,
+        'description': 'Show detailed technical error information when problems occur.',
+        'details': 'Displays technical error details when crashes or errors occur, instead of user-friendly messages.'
+      },
+      'Network Debugging': {
+        'value': false,
+        'icon': Icons.wifi,
+        'description': 'Monitor and log network traffic for troubleshooting.',
+        'details': 'Logs all network requests and responses for debugging. May slow down network operations.'
+      },
+    },
+    'Advanced Features': {
+      'Custom Themes': {
+        'value': false,
+        'icon': Icons.format_paint,
+        'description': 'Create and apply custom themes beyond the built-in options.',
+        'details': 'Allows creating and modifying custom themes with advanced color and style options.'
+      },
+      'Voice Command Mode': {
+        'value': false,
+        'icon': Icons.record_voice_over,
+        'description': 'Control the app using voice commands for hands-free operation.',
+        'details': 'Enables navigation and control of the app using voice commands. Requires microphone permission.'
+      },
+      'Alternative Text Models': {
+        'value': false,
+        'icon': Icons.text_fields,
+        'description': 'Use third-party text processing models instead of default models.',
+        'details': 'Allows using alternative text processing models. May require additional downloads.'
+      },
+      'Keyboard Shortcuts': {
+        'value': true,
+        'icon': Icons.keyboard,
+        'description': 'Enable keyboard shortcuts for faster navigation and actions.',
+        'details': 'Enables keyboard shortcuts for common actions on desktop platforms.'
+      },
+    },
+  };
+  
+  // Selected log level
   String selectedLogLevel = 'Warning';
   final List<String> logLevels = ['Debug', 'Info', 'Warning', 'Error', 'Critical'];
   
+  // Debug console
+  final List<String> _debugLogs = [];
+  final ScrollController _logsScrollController = ScrollController();
+  final TextEditingController _logInputController = TextEditingController();
+  
+  // State variables
   bool haveUnsavedChanges = false;
   bool showRestartDialog = false;
+  String _searchQuery = '';
+  String? _selectedCategory;
+  bool _showSystemInfo = false;
+  bool _showPerformanceMetrics = false;
+  Timer? _metricsRefreshTimer;
+  Map<String, double> _metrics = {
+    'Memory Usage': 0,
+    'CPU Usage': 0,
+    'Network Speed': 0,
+    'Battery Drain': 0,
+    'Storage': 0,
+  };
   
   // For animations and expanded sections
   late AnimationController _animationController;
-  bool _developerOptionsExpanded = false;
-  bool _performanceOptionsExpanded = false;
-  bool _debuggingOptionsExpanded = false;
-  
-  // For debug console
-  final List<String> _debugLogs = [];
-  final ScrollController _logsScrollController = ScrollController();
+  Set<String> _expandedCategories = {'Developer Options', 'Performance Options', 'Debugging Options', 'Advanced Features'};
   
   @override
   void initState() {
@@ -41,6 +159,9 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
+    
+    // Set initial selected category
+    _selectedCategory = _settings.keys.first;
     
     // Populate some sample debug logs
     _debugLogs.add("[${DateTime.now().toString()}] System initialized");
@@ -56,45 +177,23 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
   }
   
   // Update settings and track changes
-  void _updateSetting(String setting, dynamic value) {
+  void _updateSetting(String category, String setting, bool value) {
     setState(() {
-      switch (setting) {
-        case 'developerMode':
-          developerMode = value as bool;
-          break;
-        case 'betaFeatures':
-          betaFeatures = value as bool;
-          if (value == true && !showRestartDialog) {
-            _showRestartRequiredDialog();
-            showRestartDialog = true;
-          }
-          break;
-        case 'enableLogs':
-          enableLogs = value as bool;
-          break;
-        case 'experimentalAI':
-          experimentalAI = value as bool;
-          if (value == true && !showRestartDialog) {
-            _showRestartRequiredDialog();
-            showRestartDialog = true;
-          }
-          break;
-        case 'cachingEnabled':
-          cachingEnabled = value as bool;
-          break;
-        case 'powerSavingMode':
-          powerSavingMode = value as bool;
-          break;
-        case 'logLevel':
-          selectedLogLevel = value as String;
-          break;
+      if (_settings[category]?[setting] != null) {
+        _settings[category]![setting]['value'] = value;
+        haveUnsavedChanges = true;
+        
+        // Check if restart is required
+        if (_settings[category]![setting]['requiresRestart'] == true && !showRestartDialog) {
+          _showRestartRequiredDialog();
+          showRestartDialog = true;
+        }
       }
-      haveUnsavedChanges = true;
     });
     
     // Add a debug log entry
-    if (enableLogs) {
-      _addDebugLog("Setting '$setting' changed to '$value'");
+    if (_settings['Debugging Options']?['Enable Debug Logs']?['value'] == true) {
+      _addDebugLog("Setting '$setting' in '$category' changed to '$value'");
     }
   }
   
@@ -188,12 +287,26 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
               onPressed: () {
                 Navigator.pop(context);
                 setState(() {
-                  developerMode = false;
-                  betaFeatures = false;
-                  enableLogs = false;
-                  experimentalAI = false;
-                  cachingEnabled = true;
-                  powerSavingMode = false;
+                  // Reset all settings to their default values
+                  _settings['Developer Options']?.forEach((key, value) {
+                    value['value'] = false;
+                  });
+                  
+                  _settings['Performance Options']?['Background Processing']?['value'] = true;
+                  _settings['Performance Options']?['Enable Caching']?['value'] = true;
+                  _settings['Performance Options']?['High Performance Mode']?['value'] = false;
+                  _settings['Performance Options']?['Offline Mode']?['value'] = false;
+                  
+                  _settings['Debugging Options']?['Enable Debug Logs']?['value'] = false;
+                  _settings['Debugging Options']?['Crash Reporting']?['value'] = true;
+                  _settings['Debugging Options']?['Extended Error Details']?['value'] = false;
+                  _settings['Debugging Options']?['Network Debugging']?['value'] = false;
+                  
+                  _settings['Advanced Features']?['Custom Themes']?['value'] = false;
+                  _settings['Advanced Features']?['Voice Command Mode']?['value'] = false;
+                  _settings['Advanced Features']?['Alternative Text Models']?['value'] = false;
+                  _settings['Advanced Features']?['Keyboard Shortcuts']?['value'] = true;
+                  
                   selectedLogLevel = 'Warning';
                   haveUnsavedChanges = true;
                 });
@@ -212,216 +325,166 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
     
-    return GradientScaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Advanced Settings',
-          style: TextStyle(
-            fontWeight: FontWeight.bold, 
-            fontSize: 22, 
-            color: Colors.white
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            if (haveUnsavedChanges) {
-              _showUnsavedChangesDialog();
-            } else {
-              Navigator.pop(context);
-            }
-          },
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _resetAllSettings,
-            tooltip: 'Reset all settings',
-          ),
-        ],
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header with warning
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.all(16.0),
-            padding: const EdgeInsets.all(16.0),
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.orange.withOpacity(0.5),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.warning_amber_rounded,
-                  color: Colors.orange,
-                  size: 24,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    'These settings are intended for advanced users. '
-                    'Changing them may affect app performance and stability.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: isDarkMode ? Colors.white70 : Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Main settings
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16.0),
-              children: [
-                // Developer Options Section
-                _buildExpandableSection(
-                  title: 'Developer Options',
-                  icon: Icons.code,
-                  isExpanded: _developerOptionsExpanded,
-                  onToggle: () {
-                    setState(() {
-                      _developerOptionsExpanded = !_developerOptionsExpanded;
-                    });
-                  },
-                  children: [
-                    _buildAnimatedSwitchTile(
-                      title: 'Enable Developer Mode',
-                      description: 'Access debugging tools and experimental features.',
-                      icon: Icons.developer_mode,
-                      value: developerMode,
-                      isDarkMode: isDarkMode,
-                      onChanged: (val) => _updateSetting('developerMode', val),
-                    ),
-                    _buildAnimatedSwitchTile(
-                      title: 'Enable Beta Features',
-                      description: 'Try out upcoming features before they are released.',
-                      icon: Icons.new_releases,
-                      value: betaFeatures,
-                      isDarkMode: isDarkMode,
-                      onChanged: (val) => _updateSetting('betaFeatures', val),
-                    ),
-                    _buildAnimatedSwitchTile(
-                      title: 'Experimental AI Models',
-                      description: 'Use cutting-edge AI models that are still in development.',
-                      icon: Icons.psychology,
-                      value: experimentalAI,
-                      isDarkMode: isDarkMode,
-                      onChanged: (val) => _updateSetting('experimentalAI', val),
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: 16),
-                
-                // Performance Options Section
-                _buildExpandableSection(
-                  title: 'Performance Options',
-                  icon: Icons.speed,
-                  isExpanded: _performanceOptionsExpanded,
-                  onToggle: () {
-                    setState(() {
-                      _performanceOptionsExpanded = !_performanceOptionsExpanded;
-                    });
-                  },
-                  children: [
-                    _buildAnimatedSwitchTile(
-                      title: 'Background Processing',
-                      description: 'Allow the app to process data in the background.',
-                      icon: Icons.all_inclusive,
-                      value: !powerSavingMode,
-                      isDarkMode: isDarkMode,
-                      onChanged: (val) => _updateSetting('powerSavingMode', !val),
-                    ),
-                    _buildAnimatedSwitchTile(
-                      title: 'Enable Caching',
-                      description: 'Store temporary data to improve performance.',
-                      icon: Icons.cached,
-                      value: cachingEnabled,
-                      isDarkMode: isDarkMode,
-                      onChanged: (val) => _updateSetting('cachingEnabled', val),
-                    ),
-                    // Performance metrics card
-                    if (developerMode)
-                      _buildPerformanceMetricsCard(isDarkMode),
-                  ],
-                ),
-                
-                const SizedBox(height: 16),
-                
-                // Debugging Options Section
-                _buildExpandableSection(
-                  title: 'Debugging Options',
-                  icon: Icons.bug_report,
-                  isExpanded: _debuggingOptionsExpanded,
-                  onToggle: () {
-                    setState(() {
-                      _debuggingOptionsExpanded = !_debuggingOptionsExpanded;
-                    });
-                  },
-                  children: [
-                    _buildAnimatedSwitchTile(
-                      title: 'Enable Debug Logs',
-                      description: 'Log errors and diagnostic information for troubleshooting.',
-                      icon: Icons.subject,
-                      value: enableLogs,
-                      isDarkMode: isDarkMode,
-                      onChanged: (val) => _updateSetting('enableLogs', val),
-                    ),
-                    // Log level dropdown
-                    if (enableLogs)
-                      _buildLogLevelSelector(isDarkMode),
-                    // Debug console
-                    if (enableLogs && developerMode)
-                      _buildDebugConsole(isDarkMode),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          
-          // Save button at bottom
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16.0),
-            decoration: BoxDecoration(
-              color: isDarkMode 
-                  ? Colors.black.withOpacity(0.3)
-                  : Colors.black.withOpacity(0.1),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+    return WillPopScope(
+      onWillPop: () async {
+        if (haveUnsavedChanges) {
+          _showUnsavedChangesDialog();
+          return false;
+        }
+        return true;
+      },
+      child: GradientScaffold(
+        appBar: AppBar(
+          title: Text(
+            'Advanced Settings',
+            style: themeProvider.headlineLarge.copyWith(
+              color: Colors.white,
+              shadows: [
+                Shadow(
+                  color: Colors.black.withOpacity(0.3),
+                  offset: const Offset(0, 2),
                   blurRadius: 4,
-                  offset: const Offset(0, -2),
                 ),
               ],
             ),
-            child: ElevatedButton(
-              onPressed: haveUnsavedChanges ? _savePreferences : null,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                backgroundColor: Colors.blueAccent,
-                disabledBackgroundColor: Colors.blueAccent.withOpacity(0.5),
-              ),
-              child: Text(
-                'Save Preferences',
-                style: TextStyle(
-                  fontSize: 16, 
-                  fontWeight: FontWeight.bold, 
-                  color: Colors.white.withOpacity(haveUnsavedChanges ? 1.0 : 0.7),
-                ),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () {
+              if (haveUnsavedChanges) {
+                _showUnsavedChangesDialog();
+              } else {
+                Navigator.pop(context);
+              }
+            },
+          ),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              onPressed: _resetAllSettings,
+              tooltip: 'Reset all settings',
+            ),
+            // Toggle system info
+            IconButton(
+              icon: Icon(_showSystemInfo ? Icons.info : Icons.info_outline, color: Colors.white),
+              onPressed: _toggleSystemInfo,
+              tooltip: 'System Information',
+            ),
+          ],
+        ),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with warning
+            _buildWarningHeader(isDarkMode, themeProvider),
+            
+            // Category tabs
+            _buildCategoryTabs(isDarkMode, themeProvider),
+            
+            // Main content
+            Expanded(
+              child: _buildMainContent(isDarkMode, themeProvider),
+            ),
+            
+            // Save button at bottom
+            _buildBottomActionBar(isDarkMode, themeProvider),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildMainContent(bool isDarkMode, ThemeProvider themeProvider) {
+    // Show system info if enabled
+    if (_showSystemInfo) {
+      return _buildSystemInfoView(isDarkMode, themeProvider);
+    }
+    
+    // Show all settings
+    return ListView(
+      padding: const EdgeInsets.all(16.0),
+      children: [
+        // If a category is selected, show only its settings
+        if (_selectedCategory != null && _settings.containsKey(_selectedCategory)) ...[
+          ...buildSettingsForCategory(_selectedCategory!, isDarkMode, themeProvider),
+        ],
+        
+        // If Developer Mode is enabled, show additional debug options
+        if (_selectedCategory == 'Debugging Options' && 
+            _settings['Developer Options']?['Enable Developer Mode']?['value'] == true) ...[
+          _buildDebugConsole(isDarkMode, themeProvider),
+        ],
+        
+        // If Performance Metrics is enabled, show metrics panel
+        if (_selectedCategory == 'Performance Options' && 
+            _settings['Developer Options']?['Enable Developer Mode']?['value'] == true) ...[
+          const SizedBox(height: 16),
+          _buildPerformanceMetricsPanel(isDarkMode, themeProvider),
+        ],
+      ],
+    );
+  }
+
+  List<Widget> buildSettingsForCategory(String category, bool isDarkMode, ThemeProvider themeProvider) {
+    final settingsForCategory = _settings[category];
+    if (settingsForCategory == null) return [];
+    
+    return [
+      _buildCategoryHeader(category, isDarkMode, themeProvider),
+      
+      // If this is the Debugging category and debug logs are enabled, show log level selector
+      if (category == 'Debugging Options' && 
+          settingsForCategory['Enable Debug Logs']?['value'] == true) ...[
+        _buildLogLevelSelector(isDarkMode, themeProvider),
+      ],
+      
+      // Display all settings for this category
+      ...settingsForCategory.entries.map((entry) {
+        final settingName = entry.key;
+        final settingData = entry.value;
+        
+        return _buildAnimatedSwitchTile(
+          title: settingName,
+          description: settingData['description'] as String,
+          details: settingData['details'] as String,
+          icon: settingData['icon'] as IconData,
+          value: settingData['value'] as bool,
+          isDarkMode: isDarkMode,
+          themeProvider: themeProvider,
+          requiresRestart: settingData['requiresRestart'] as bool? ?? false,
+          onChanged: (val) => _updateSetting(category, settingName, val),
+        );
+      }).toList(),
+    ];
+  }
+
+  Widget _buildWarningHeader(bool isDarkMode, ThemeProvider themeProvider) {
+    return Container(
+      margin: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+        border: Border.all(
+          color: Colors.orange.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            color: Colors.orange,
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'These settings are intended for advanced users. Changes may affect app stability.',
+              style: themeProvider.bodyMedium.copyWith(
+                color: Colors.orange.shade800,
               ),
             ),
           ),
@@ -429,440 +492,170 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
       ),
     );
   }
-  
-  Widget _buildExpandableSection({
-    required String title,
-    required IconData icon,
-    required bool isExpanded,
-    required VoidCallback onToggle,
-    required List<Widget> children,
-  }) {
-    return Card(
-      elevation: 0,
-      color: Colors.black.withOpacity(0.2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
-        children: [
-          // Header
-          InkWell(
-            onTap: onToggle,
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
+
+  Widget _buildCategoryTabs(bool isDarkMode, ThemeProvider themeProvider) {
+    return Container(
+      height: 50,
+      margin: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: _settings.keys.map((category) {
+          final isSelected = _selectedCategory == category;
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                _selectedCategory = category;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                color: isSelected 
+                    ? themeProvider.accentColor.withOpacity(isDarkMode ? 0.3 : 0.1)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                border: Border.all(
+                  color: isSelected 
+                      ? themeProvider.accentColor 
+                      : themeProvider.settingsCardBorderColor,
+                  width: 1,
+                ),
+              ),
               child: Row(
                 children: [
                   Icon(
-                    icon,
-                    color: Colors.white,
-                    size: 24,
+                    _getCategoryIcon(category),
+                    size: 18,
+                    color: isSelected 
+                        ? themeProvider.accentColor
+                        : themeProvider.secondaryIconColor,
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 8),
                   Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const Spacer(),
-                  RotationTransition(
-                    turns: Tween(begin: 0.0, end: 0.5)
-                        .animate(_animationController),
-                    child: Icon(
-                      Icons.keyboard_arrow_down,
-                      color: Colors.white,
+                    category.replaceAll(' Options', ''),
+                    style: themeProvider.bodyMedium.copyWith(
+                      color: isSelected 
+                          ? themeProvider.accentColor
+                          : themeProvider.secondaryTextColor,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-          // Content
-          AnimatedCrossFade(
-            firstChild: const SizedBox(height: 0),
-            secondChild: Padding(
-              padding: const EdgeInsets.fromLTRB(8.0, 0.0, 8.0, 8.0),
-              child: Column(children: children),
-            ),
-            crossFadeState: isExpanded
-                ? CrossFadeState.showSecond
-                : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 300),
-          ),
-        ],
+          );
+        }).toList(),
       ),
     );
   }
-  
-  Widget _buildAnimatedSwitchTile({
-    required String title,
-    required String description,
-    required IconData icon,
-    required bool value,
-    required bool isDarkMode,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Card(
-        elevation: 0,
-        color: Colors.white.withOpacity(isDarkMode ? 0.05 : 0.1),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: value 
-                      ? Colors.blueAccent.withOpacity(0.2)
-                      : Colors.grey.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  icon,
-                  color: value 
-                      ? Colors.blueAccent
-                      : Colors.grey,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title, 
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      description, 
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Switch(
-                value: value,
-                onChanged: onChanged,
-                activeColor: Colors.blueAccent,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildLogLevelSelector(bool isDarkMode) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Card(
-        elevation: 0,
-        color: Colors.white.withOpacity(isDarkMode ? 0.05 : 0.1),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Log Level',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Set the minimum severity level for log messages',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white70,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: Colors.grey.withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                child: DropdownButton<String>(
-                  value: selectedLogLevel,
-                  onChanged: (String? newValue) {
-                    if (newValue != null) {
-                      _updateSetting('logLevel', newValue);
-                    }
-                  },
-                  items: logLevels.map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(
-                        value,
-                        style: const TextStyle(
-                          color: Colors.white,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                  isExpanded: true,
-                  dropdownColor: Colors.grey.shade800,
-                  underline: Container(), // Remove the default underline
-                  icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildDebugConsole(bool isDarkMode) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Card(
-        elevation: 0,
-        color: Colors.black.withOpacity(0.3),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Debug Console',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                    ),
-                  ),
-                  TextButton.icon(
-                    icon: const Icon(Icons.delete, size: 16),
-                    label: const Text('Clear'),
-                    onPressed: _clearLogs,
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8, 
-                        vertical: 4
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Container(
-                height: 150,
-                padding: const EdgeInsets.all(12.0),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: Colors.grey.withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                child: _debugLogs.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'No logs available',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: _logsScrollController,
-                        itemCount: _debugLogs.length,
-                        itemBuilder: (context, index) {
-                          final log = _debugLogs[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 4.0),
-                            child: Text(
-                              log,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontFamily: 'monospace',
-                                color: log.contains('ERROR')
-                                    ? Colors.red.shade300
-                                    : log.contains('WARNING')
-                                        ? Colors.orange.shade300
-                                        : Colors.green.shade300,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.refresh, size: 16),
-                      label: const Text('Generate Test Log'),
-                      onPressed: () {
-                        final logTypes = ['INFO', 'WARNING', 'ERROR', 'DEBUG'];
-                        final random = Random();
-                        final logType = logTypes[random.nextInt(logTypes.length)];
-                        _addDebugLog("$logType: Test log message generated");
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey.shade800,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8, 
-                          horizontal: 16
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildPerformanceMetricsCard(bool isDarkMode) {
-    // Simulated performance metrics
-    final memoryUsage = Random().nextInt(300) + 100; // 100-400 MB
-    final cpuUsage = Random().nextInt(30) + 5; // 5-35%
-    final responseTime = Random().nextInt(200) + 50; // 50-250ms
-    
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Card(
-        elevation: 0,
-        color: Colors.blue.withOpacity(0.1),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Performance Metrics',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 16),
-              _buildMetricRow(
-                icon: Icons.memory,
-                label: 'Memory Usage',
-                value: '$memoryUsage MB',
-                color: memoryUsage > 300 
-                    ? Colors.red 
-                    : memoryUsage > 200 
-                        ? Colors.orange 
-                        : Colors.green,
-              ),
-              const SizedBox(height: 12),
-              _buildMetricRow(
-                icon: Icons.speed,
-                label: 'CPU Usage',
-                value: '$cpuUsage%',
-                color: cpuUsage > 25 
-                    ? Colors.red 
-                    : cpuUsage > 15 
-                        ? Colors.orange 
-                        : Colors.green,
-              ),
-              const SizedBox(height: 12),
-              _buildMetricRow(
-                icon: Icons.timer,
-                label: 'Response Time',
-                value: '$responseTime ms',
-                color: responseTime > 200 
-                    ? Colors.red 
-                    : responseTime > 100 
-                        ? Colors.orange 
-                        : Colors.green,
-              ),
-              const SizedBox(height: 12),
-              Center(
-                child: TextButton.icon(
-                  icon: const Icon(Icons.refresh, size: 16),
-                  label: const Text('Refresh Metrics'),
-                  onPressed: () {
-                    setState(() {
-                      // This will rebuild the widget with new random values
-                    });
-                  },
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildMetricRow({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Row(
+
+  Widget _buildSystemInfoView(bool isDarkMode, ThemeProvider themeProvider) {
+    return ListView(
+      padding: const EdgeInsets.all(16.0),
       children: [
-        Icon(
-          icon,
-          size: 20,
-          color: color,
-        ),
-        const SizedBox(width: 12),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 14,
-          ),
-        ),
-        const Spacer(),
-        Text(
-          value,
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
+        Container(
+          decoration: themeProvider.settingsCardDecoration,
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'System Information',
+                style: themeProvider.settingsHeaderStyle,
+              ),
+              const SizedBox(height: 16),
+              _buildSystemInfoRow('Operating System', 'Android 13', themeProvider),
+              _buildSystemInfoRow('Device Model', 'Pixel 6', themeProvider),
+              _buildSystemInfoRow('App Version', '1.0.0 (build 100)', themeProvider),
+              _buildSystemInfoRow('Screen Resolution', '1080 x 2400', themeProvider),
+              _buildSystemInfoRow('Memory Usage', '1.2 GB / 8 GB', themeProvider),
+              _buildSystemInfoRow('Storage', '45.3 GB free of 128 GB', themeProvider),
+            ],
           ),
         ),
       ],
     );
   }
-  
+
+  Widget _buildSystemInfoRow(String label, String value, ThemeProvider themeProvider) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: themeProvider.bodyMedium.copyWith(
+              color: themeProvider.secondaryTextColor,
+            ),
+          ),
+          Text(
+            value,
+            style: themeProvider.bodyMedium.copyWith(
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPerformanceMetricsPanel(bool isDarkMode, ThemeProvider themeProvider) {
+    // Implementation of _buildPerformanceMetricsPanel method
+    // This method should return a widget representing the performance metrics panel
+    return Container(); // Placeholder return, actual implementation needed
+  }
+
+  Widget _buildDebugConsole(bool isDarkMode, ThemeProvider themeProvider) {
+    // Implementation of _buildDebugConsole method
+    // This method should return a widget representing the debug console
+    return Container(); // Placeholder return, actual implementation needed
+  }
+
+  Widget _buildBottomActionBar(bool isDarkMode, ThemeProvider themeProvider) {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: themeProvider.settingsBottomBarDecoration,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          TextButton.icon(
+            onPressed: _resetAllSettings,
+            icon: const Icon(Icons.restore),
+            label: const Text('Reset All'),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+          ),
+          ElevatedButton(
+            onPressed: haveUnsavedChanges ? _saveSettings : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: themeProvider.accentColor,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: themeProvider.accentColor.withOpacity(0.5),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: Text(
+              'Save Changes',
+              style: themeProvider.titleMedium.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _toggleSystemInfo() {
+    setState(() {
+      _showSystemInfo = !_showSystemInfo;
+      _selectedCategory = null;
+    });
+  }
+
   void _showUnsavedChangesDialog() {
     showDialog(
       context: context,
@@ -892,5 +685,272 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
         );
       },
     );
+  }
+
+  Widget _buildCategoryHeader(String category, bool isDarkMode, ThemeProvider themeProvider) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Container(
+        padding: const EdgeInsets.all(16.0),
+        decoration: themeProvider.settingsHeaderDecoration,
+        child: Row(
+          children: [
+            Icon(
+              _getCategoryIcon(category),
+              color: themeProvider.accentColor,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              category,
+              style: themeProvider.settingsHeaderStyle,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogLevelSelector(bool isDarkMode, ThemeProvider themeProvider) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20.0),
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.black.withOpacity(0.2) : Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+        border: Border.all(
+          color: Colors.grey.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.tune,
+                color: themeProvider.accentColor,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Logging Level',
+                style: themeProvider.titleMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            height: 40,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: isDarkMode ? Colors.black38 : Colors.white10,
+            ),
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: logLevels.length,
+              itemBuilder: (context, index) {
+                final level = logLevels[index];
+                final isSelected = selectedLogLevel == level;
+                
+                // Choose appropriate color based on log level
+                Color levelColor;
+                switch (level) {
+                  case 'Debug':
+                    levelColor = Colors.grey;
+                    break;
+                  case 'Info':
+                    levelColor = Colors.blue;
+                    break;
+                  case 'Warning':
+                    levelColor = Colors.orange;
+                    break;
+                  case 'Error':
+                    levelColor = Colors.red;
+                    break;
+                  case 'Critical':
+                    levelColor = Colors.purple;
+                    break;
+                  default:
+                    levelColor = Colors.grey;
+                }
+                
+                return GestureDetector(
+                  onTap: () => _updateLogLevel(level),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: isSelected ? levelColor : Colors.transparent,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Center(
+                      child: Text(
+                        level,
+                        style: themeProvider.bodyMedium.copyWith(
+                          color: isSelected ? Colors.white : levelColor,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Controls the verbosity of logs. Higher levels include all lower levels.',
+            style: themeProvider.bodySmall.copyWith(
+              color: themeProvider.secondaryTextColor,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _toggleCategory(String category) {
+    setState(() {
+      if (_expandedCategories.contains(category)) {
+        _expandedCategories.remove(category);
+      } else {
+        _expandedCategories.add(category);
+      }
+    });
+  }
+
+  Widget _buildAnimatedSwitchTile({
+    required String title,
+    required String description,
+    required String details,
+    required IconData icon,
+    required bool value,
+    required bool isDarkMode,
+    required ThemeProvider themeProvider,
+    required bool requiresRestart,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12.0),
+      decoration: themeProvider.settingsCardDecoration,
+      child: Column(
+        children: [
+          ListTile(
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: themeProvider.getSettingsIconDecoration(isActive: value),
+              child: Icon(
+                icon,
+                color: themeProvider.getSettingsIconColor(isActive: value),
+                size: 20,
+              ),
+            ),
+            title: Text(
+              title,
+              style: themeProvider.settingsTitleStyle,
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: themeProvider.settingsDescriptionStyle,
+                ),
+                if (requiresRestart) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.refresh,
+                        size: 14,
+                        color: Colors.orange,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Requires restart',
+                        style: themeProvider.bodySmall.copyWith(
+                          color: Colors.orange,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+            trailing: Switch.adaptive(
+              value: value,
+              onChanged: onChanged,
+              activeColor: themeProvider.accentColor,
+              activeTrackColor: themeProvider.accentColor.withOpacity(0.4),
+              inactiveThumbColor: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade50,
+              inactiveTrackColor: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
+            ),
+          ),
+          if (details.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Text(
+                details,
+                style: themeProvider.bodySmall.copyWith(
+                  color: themeProvider.secondaryTextColor,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _updateLogLevel(String level) {
+    setState(() {
+      selectedLogLevel = level;
+    });
+    
+    // Add a debug log entry
+    if (_settings['Debugging Options']?['Enable Debug Logs']?['value'] == true) {
+      _addDebugLog("Logging level changed to '$level'");
+    }
+  }
+
+  // Save settings
+  void _saveSettings() {
+    // Here you would typically save to SharedPreferences or backend
+    setState(() {
+      haveUnsavedChanges = false;
+    });
+
+    // Show confirmation
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Settings saved successfully'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'Developer Options':
+        return Icons.code;
+      case 'Performance Options':
+        return Icons.speed;
+      case 'Debugging Options':
+        return Icons.bug_report;
+      case 'Advanced Features':
+        return Icons.extension;
+      default:
+        return Icons.settings;
+    }
   }
 }

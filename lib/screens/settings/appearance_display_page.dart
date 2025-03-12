@@ -25,7 +25,6 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
   final Map<String, bool> _hoverStates = {};
 
   // Animation controller
-  late TabController _tabController;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
@@ -51,7 +50,6 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
     
     // Initialize animation controller for demos
     _animationController = AnimationController(
@@ -87,7 +85,6 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
 
   @override
   void dispose() {
-    _tabController.dispose();
     _animationController.dispose();
     super.dispose();
   }
@@ -130,27 +127,16 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return GradientScaffold(
       appBar: AppBar(
         title: Text(
           'Appearance & Display',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            shadows: [
-              Shadow(
-                color: Colors.black.withOpacity(0.3),
-                offset: const Offset(0, 2),
-                blurRadius: 4,
-              ),
-            ],
-          ),
+          style: themeProvider.settingsHeaderStyle,
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: themeProvider.primaryIconColor),
           onPressed: () {
             if (haveUnsavedChanges) {
               _showUnsavedChangesDialog();
@@ -159,35 +145,387 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
             }
           },
         ),
-        backgroundColor: isDarkMode 
-            ? Colors.black26 
-            : const Color(0xFF2196F3).withOpacity(0.8),
-        elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          indicatorWeight: 3,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
-          tabs: const [
-            Tab(text: 'Theme'),
-            Tab(text: 'Text'),
-            Tab(text: 'Effects'),
-          ],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildThemeTab(isDarkMode, themeProvider),
-          _buildTextTab(isDarkMode, themeProvider),
-          _buildEffectsTab(isDarkMode, themeProvider),
+          // Warning banner
+          Container(
+            margin: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+              border: Border.all(
+                color: Colors.blue.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: Colors.blue,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Changes to appearance settings will be applied immediately.',
+                    style: themeProvider.bodyMedium.copyWith(
+                      color: Colors.blue.shade800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Main content
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              children: [
+                Container(
+                  constraints: const BoxConstraints(minHeight: 0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Theme Section
+                      _buildSection(
+                        'Theme',
+                        [
+                          _buildSettingCard(
+                            'Dark Mode',
+                            'Switch between light and dark theme',
+                            Switch(
+                              value: isDarkMode,
+                              onChanged: (value) {
+                                setState(() {
+                                  themeProvider.toggleTheme(value);
+                                  haveUnsavedChanges = true;
+                                });
+                              },
+                            ),
+                            themeProvider,
+                          ),
+                          _buildSettingCard(
+                            'Purple Gradient',
+                            'Use purple gradient style throughout the app',
+                            Switch(
+                              value: usePurpleGradient,
+                              onChanged: (value) {
+                                setState(() {
+                                  usePurpleGradient = value;
+                                  haveUnsavedChanges = true;
+                                });
+                              },
+                            ),
+                            themeProvider,
+                          ),
+                          _buildSettingCard(
+                            'Accent Color',
+                            'Choose your preferred accent color',
+                            SizedBox(
+                              width: 120,
+                              child: DropdownButton<String>(
+                                value: selectedAccentColor,
+                                isExpanded: true,
+                                items: accentColorOptions.keys.map((String color) {
+                                  return DropdownMenuItem<String>(
+                                    value: color,
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 16,
+                                          height: 16,
+                                          decoration: BoxDecoration(
+                                            color: accentColorOptions[color],
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(color),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  if (newValue != null) {
+                                    setState(() {
+                                      selectedAccentColor = newValue;
+                                      haveUnsavedChanges = true;
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                            themeProvider,
+                          ),
+                        ],
+                        themeProvider,
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Typography Section
+                      _buildSection(
+                        'Typography',
+                        [
+                          _buildSettingCard(
+                            'Text Size',
+                            'Adjust the size of text throughout the app',
+                            SizedBox(
+                              width: 200,
+                              child: Slider(
+                                value: textScale,
+                                min: 0.8,
+                                max: 1.4,
+                                divisions: 6,
+                                label: '${(textScale * 100).round()}%',
+                                onChanged: (value) {
+                                  setState(() {
+                                    textScale = value;
+                                    haveUnsavedChanges = true;
+                                  });
+                                },
+                              ),
+                            ),
+                            themeProvider,
+                          ),
+                          _buildSettingCard(
+                            'Font Family',
+                            'Choose your preferred font family',
+                            SizedBox(
+                              width: 150,
+                              child: DropdownButton<String>(
+                                value: selectedFontFamily,
+                                isExpanded: true,
+                                items: fontOptions.map((String font) {
+                                  return DropdownMenuItem<String>(
+                                    value: font,
+                                    child: Text(
+                                      font,
+                                      style: TextStyle(fontFamily: font),
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  if (newValue != null) {
+                                    setState(() {
+                                      selectedFontFamily = newValue;
+                                      haveUnsavedChanges = true;
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                            themeProvider,
+                          ),
+                          _buildTextPreview(isDarkMode, themeProvider),
+                        ],
+                        themeProvider,
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Animations Section
+                      _buildSection(
+                        'Animations',
+                        [
+                          _buildSettingCard(
+                            'Enable Animations',
+                            'Show subtle animations throughout the app',
+                            Switch(
+                              value: useAnimations,
+                              onChanged: (value) {
+                                setState(() {
+                                  useAnimations = value;
+                                  haveUnsavedChanges = true;
+                                });
+                              },
+                            ),
+                            themeProvider,
+                          ),
+                          if (useAnimations)
+                            _buildSettingCard(
+                              'Animation Speed',
+                              'Adjust the speed of animations',
+                              SizedBox(
+                                width: 150,
+                                child: DropdownButton<String>(
+                                  value: selectedAnimationSpeed,
+                                  isExpanded: true,
+                                  items: animationSpeedOptions.map((String speed) {
+                                    return DropdownMenuItem<String>(
+                                      value: speed,
+                                      child: Text(speed),
+                                    );
+                                  }).toList(),
+                                  onChanged: (String? newValue) {
+                                    if (newValue != null) {
+                                      setState(() {
+                                        selectedAnimationSpeed = newValue;
+                                        haveUnsavedChanges = true;
+                                      });
+                                    }
+                                  },
+                                ),
+                              ),
+                              themeProvider,
+                            ),
+                          _buildAnimationPreview(isDarkMode, themeProvider),
+                        ],
+                        themeProvider,
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Visual Style Section
+                      _buildSection(
+                        'Visual Style',
+                        [
+                          _buildSettingCard(
+                            'Corner Roundness',
+                            'Adjust the roundness of corners throughout the app',
+                            SizedBox(
+                              width: 200,
+                              child: Slider(
+                                value: selectedBorderRadius,
+                                min: 0,
+                                max: 24,
+                                divisions: 12,
+                                label: '${selectedBorderRadius.round()}',
+                                onChanged: (value) {
+                                  setState(() {
+                                    selectedBorderRadius = value;
+                                    haveUnsavedChanges = true;
+                                  });
+                                },
+                              ),
+                            ),
+                            themeProvider,
+                          ),
+                          _buildSettingCard(
+                            'Elevation',
+                            'Adjust the shadow depth of elements',
+                            SizedBox(
+                              width: 200,
+                              child: Slider(
+                                value: selectedElevation,
+                                min: 0,
+                                max: 2,
+                                divisions: 4,
+                                label: selectedElevation.toStringAsFixed(1),
+                                onChanged: (value) {
+                                  setState(() {
+                                    selectedElevation = value;
+                                    haveUnsavedChanges = true;
+                                  });
+                                },
+                              ),
+                            ),
+                            themeProvider,
+                          ),
+                          _buildStyleSettings(isDarkMode, themeProvider),
+                        ],
+                        themeProvider,
+                      ),
+
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Bottom action bar
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            decoration: themeProvider.settingsBottomBarDecoration,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton.icon(
+                  onPressed: () => _resetSettings(),
+                  icon: const Icon(Icons.restore, color: Colors.red),
+                  label: Text(
+                    'Reset',
+                    style: themeProvider.bodyMedium.copyWith(
+                      color: Colors.red,
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: haveUnsavedChanges ? _savePreferences : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: themeProvider.accentColor,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: themeProvider.accentColor.withOpacity(0.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                    ),
+                  ),
+                  child: Text(
+                    'Save Changes',
+                    style: themeProvider.titleMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
-      bottomNavigationBar: _buildBottomBar(themeProvider),
     );
+  }
+
+  Widget _buildSection(String title, List<Widget> children, ThemeProvider themeProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 12.0),
+          margin: const EdgeInsets.only(bottom: 8.0),
+          decoration: themeProvider.settingsHeaderDecoration,
+          child: Row(
+            children: [
+              Icon(
+                _getSectionIcon(title),
+                color: themeProvider.accentColor,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: themeProvider.settingsHeaderStyle,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        ...children,
+      ],
+    );
+  }
+
+  IconData _getSectionIcon(String section) {
+    switch (section.toLowerCase()) {
+      case 'theme':
+        return Icons.palette_outlined;
+      case 'typography':
+        return Icons.text_fields_outlined;
+      case 'animations':
+        return Icons.animation_outlined;
+      case 'visual style':
+        return Icons.style_outlined;
+      default:
+        return Icons.settings_outlined;
+    }
   }
 
   Widget _buildThemeTab(bool isDarkMode, ThemeProvider themeProvider) {
@@ -1457,37 +1795,26 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
     );
   }
 
-  void _resetToDefaults() {
+  void _resetSettings() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-        
         return AlertDialog(
-          title: Text(
-            'Reset to Defaults',
-            style: themeProvider.headlineMedium,
-          ),
-          content: Text(
-            'This will reset all appearance settings to their default values. This action cannot be undone.',
-            style: themeProvider.bodyMedium,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+          title: const Text('Reset Settings'),
+          content: const Text(
+            'Are you sure you want to reset all appearance settings to their defaults?'
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              style: themeProvider.textButtonStyle,
               child: const Text('CANCEL'),
             ),
-            ElevatedButton(
+            TextButton(
               onPressed: () {
                 Navigator.pop(context);
-                
                 setState(() {
-                  usePurpleGradient = true;
                   textScale = 1.0;
+                  usePurpleGradient = true;
                   selectedFontFamily = 'Roboto';
                   selectedAccentColor = 'Blue';
                   useAnimations = true;
@@ -1496,23 +1823,85 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
                   selectedElevation = 1.0;
                   haveUnsavedChanges = true;
                 });
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Settings reset to defaults'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
               child: const Text('RESET'),
             ),
           ],
         );
       },
     );
+  }
+
+  Widget _buildSettingCard(
+    String title,
+    String subtitle,
+    Widget trailing,
+    ThemeProvider themeProvider,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8.0),
+      decoration: themeProvider.settingsCardDecoration,
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: themeProvider.getSettingsIconDecoration(
+                  isActive: title.toLowerCase().contains('dark') 
+                      ? Theme.of(context).brightness == Brightness.dark 
+                      : true
+                ),
+                child: Icon(
+                  _getSettingIcon(title),
+                  color: themeProvider.accentColor,
+                  size: 24,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: themeProvider.settingsTitleStyle,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: themeProvider.settingsDescriptionStyle,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: trailing,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _getSettingIcon(String setting) {
+    switch (setting.toLowerCase()) {
+      case 'dark mode':
+        return Icons.dark_mode_outlined;
+      case 'purple gradient':
+        return Icons.gradient;
+      case 'text size':
+        return Icons.format_size;
+      case 'font family':
+        return Icons.font_download_outlined;
+      default:
+        return Icons.settings;
+    }
   }
 }
 
