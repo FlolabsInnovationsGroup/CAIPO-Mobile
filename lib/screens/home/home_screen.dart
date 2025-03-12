@@ -496,12 +496,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
   
   Widget _buildChatHeader(bool isDarkMode) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       decoration: BoxDecoration(
         color: isDarkMode
             ? Colors.black.withOpacity(0.3)
-            : Colors.grey.shade50,
+            : Colors.white.withOpacity(0.9),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(16),
           topRight: Radius.circular(16),
@@ -519,37 +521,51 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ? _buildSearchField(isDarkMode)
           : Row(
               children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: Colors.blueAccent,
-                  child: const Text(
-                    'AI',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: themeProvider.getSettingsIconDecoration(isActive: true),
+                  child: Icon(
+                    Icons.smart_toy_outlined,
+                    color: themeProvider.accentColor,
+                    size: 20,
                   ),
                 ),
-                const SizedBox(width: 8),
-                const Text(
-                  'CAIPO Assistant',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'CAIPO Assistant',
+                      style: themeProvider.settingsTitleStyle.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: themeProvider.primaryTextColor,
+                      ),
+                    ),
+                    Text(
+                      'AI-powered companion',
+                      style: themeProvider.settingsDescriptionStyle.copyWith(
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
                 const Spacer(),
                 IconButton(
                   icon: Icon(
                     _isSearchMode ? Icons.close : Icons.search,
                     size: 22,
+                    color: themeProvider.secondaryIconColor,
                   ),
                   onPressed: _toggleSearchMode,
                   tooltip: _isSearchMode ? 'Exit Search' : 'Search Messages',
                 ),
                 IconButton(
-                  icon: const Icon(Icons.more_vert, size: 22),
+                  icon: Icon(
+                    Icons.more_vert,
+                    size: 22,
+                    color: themeProvider.secondaryIconColor,
+                  ),
                   onPressed: () {
                     _showChatOptions();
                   },

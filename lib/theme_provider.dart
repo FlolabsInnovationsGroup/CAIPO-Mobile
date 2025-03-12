@@ -82,6 +82,7 @@ class ThemeProvider with ChangeNotifier {
     _themeMode = initialThemeMode;
     _borderRadius = initialBorderRadius;
     _accentColor = initialAccentColor;
+    _initializeTextStyles();
     _loadPreferences();
   }
 
@@ -694,18 +695,103 @@ class ThemeProvider with ChangeNotifier {
   }
 
   void _initializeTextStyles() {
-    _displayMedium = const TextStyle(
-      fontSize: 32,
+    _displayMedium = TextStyle(
+      fontFamily: _fontFamily,
+      fontSize: 28 * _textSizeMultiplier,
       fontWeight: FontWeight.bold,
+      color: textColor,
+      letterSpacing: -0.5,
     );
     
-    _headlineSmall = const TextStyle(
-      fontSize: 18,
+    _headlineSmall = TextStyle(
+      fontFamily: _fontFamily,
+      fontSize: 18 * _textSizeMultiplier,
       fontWeight: FontWeight.w600,
+      color: textColor,
     );
     
-    _bodyMedium = const TextStyle(
-      fontSize: 16,
+    _bodyMedium = TextStyle(
+      fontFamily: _fontFamily,
+      fontSize: 14 * _textSizeMultiplier,
+      color: textColor,
     );
   }
+
+  // Settings-specific styles
+  Color get settingsCardBackground => isDarkMode 
+      ? Colors.black.withOpacity(0.3) 
+      : Colors.white.withOpacity(0.9);
+
+  Color get settingsCardBorderColor => isDarkMode
+      ? Colors.grey.shade800
+      : Colors.grey.shade300;
+
+  BoxDecoration get settingsCardDecoration => BoxDecoration(
+    color: settingsCardBackground,
+    borderRadius: BorderRadius.circular(borderRadius),
+    border: Border.all(
+      color: settingsCardBorderColor,
+      width: 1,
+    ),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.1),
+        blurRadius: 4,
+        offset: const Offset(0, 2),
+      ),
+    ],
+  );
+
+  BoxDecoration get settingsHeaderDecoration => BoxDecoration(
+    color: isDarkMode 
+        ? Colors.black.withOpacity(0.4)
+        : accentColor.withOpacity(0.1),
+    borderRadius: BorderRadius.circular(borderRadius),
+    border: Border.all(
+      color: isDarkMode
+          ? Colors.grey.shade800
+          : accentColor.withOpacity(0.2),
+      width: 1,
+    ),
+  );
+
+  TextStyle get settingsHeaderStyle => headlineSmall.copyWith(
+    color: isDarkMode ? Colors.white : Colors.black87,
+    fontWeight: FontWeight.bold,
+  );
+
+  TextStyle get settingsTitleStyle => titleMedium.copyWith(
+    fontWeight: FontWeight.w600,
+    color: isDarkMode ? Colors.white : Colors.black87,
+  );
+
+  TextStyle get settingsDescriptionStyle => bodyMedium.copyWith(
+    color: secondaryTextColor,
+  );
+
+  BoxDecoration getSettingsIconDecoration({required bool isActive}) => BoxDecoration(
+    color: (isActive ? accentColor : Colors.grey).withOpacity(isDarkMode ? 0.2 : 0.1),
+    borderRadius: BorderRadius.circular(borderRadius / 2),
+  );
+
+  Color getSettingsIconColor({required bool isActive}) => isActive 
+      ? accentColor
+      : isDarkMode 
+          ? Colors.grey.shade400 
+          : Colors.grey.shade600;
+
+  // Bottom bar decoration for settings pages
+  BoxDecoration get settingsBottomBarDecoration => BoxDecoration(
+    color: isDarkMode 
+        ? Colors.black.withOpacity(0.4)
+        : Colors.white.withOpacity(0.9),
+    border: Border(
+      top: BorderSide(
+        color: isDarkMode
+            ? Colors.grey.shade800
+            : Colors.grey.shade300,
+        width: 1,
+      ),
+    ),
+  );
 }

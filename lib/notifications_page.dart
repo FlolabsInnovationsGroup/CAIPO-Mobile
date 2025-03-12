@@ -239,16 +239,12 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
       onWillPop: _onWillPop,
       child: GradientScaffold(
         appBar: AppBar(
-          title: const Text(
+          title: Text(
             'Notifications & Reminders',
-            style: TextStyle(
-              fontWeight: FontWeight.bold, 
-              fontSize: 22, 
-              color: Colors.white
-            ),
+            style: themeProvider.settingsHeaderStyle,
           ),
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: Icon(Icons.arrow_back, color: themeProvider.primaryIconColor),
             onPressed: () async {
               if (await _onWillPop()) {
                 Navigator.pop(context);
@@ -263,26 +259,32 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with explanation
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              // Warning banner
+              Container(
+                margin: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                  border: Border.all(
+                    color: Colors.blue.withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
                   children: [
-                    const Text(
-                      'Manage Notifications',
-                      style: TextStyle(
-                        fontSize: 18, 
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white
-                      ),
+                    const Icon(
+                      Icons.info_outline,
+                      color: Colors.blue,
+                      size: 24,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Customize how and when you receive notifications from CAIPO.',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white.withOpacity(0.8),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Customize how and when you receive notifications from CAIPO.',
+                        style: themeProvider.bodyMedium.copyWith(
+                          color: Colors.blue.shade800,
+                        ),
                       ),
                     ),
                   ],
@@ -383,21 +385,14 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
               // Save button and confirmation at bottom
               Container(
                 padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  color: isDarkMode 
-                      ? Colors.black.withOpacity(0.3)
-                      : Colors.black.withOpacity(0.1),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
-                ),
+                decoration: themeProvider.settingsBottomBarDecoration,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Success confirmation
                     AnimatedCrossFade(
                       firstChild: Container(
+                        margin: const EdgeInsets.only(bottom: 12.0),
                         padding: const EdgeInsets.symmetric(
                           vertical: 8.0, horizontal: 16.0
                         ),
@@ -434,8 +429,6 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
                       duration: const Duration(milliseconds: 300),
                     ),
                     
-                    const SizedBox(height: 12),
-                    
                     // Action buttons
                     Row(
                       children: [
@@ -447,16 +440,12 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
                           icon: Icon(
                             Icons.refresh,
                             size: 18,
-                            color: haveUnsavedChanges
-                                ? isDarkMode ? Colors.white70 : Colors.white
-                                : isDarkMode ? Colors.white30 : Colors.white54,
+                            color: Colors.red,
                           ),
                           label: Text(
                             'Reset',
                             style: themeProvider.bodyMedium.copyWith(
-                              color: haveUnsavedChanges
-                                  ? isDarkMode ? Colors.white70 : Colors.white
-                                  : isDarkMode ? Colors.white30 : Colors.white54,
+                              color: Colors.red,
                             ),
                           ),
                           style: TextButton.styleFrom(
@@ -499,24 +488,42 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
   }
   
   Widget _buildCategoryHeader(String title, bool isDarkMode, ThemeProvider themeProvider) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8.0, 16.0, 8.0, 8.0),
-      child: Text(
-        title,
-        style: themeProvider.titleMedium.copyWith(
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
-          shadows: [
-            Shadow(
-              color: Colors.black.withOpacity(0.3),
-              offset: const Offset(0, 1),
-              blurRadius: 2,
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 12.0),
+      margin: const EdgeInsets.only(bottom: 8.0),
+      decoration: themeProvider.settingsHeaderDecoration,
+      child: Row(
+        children: [
+          Icon(
+            _getCategoryIcon(title),
+            color: themeProvider.accentColor,
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: themeProvider.settingsHeaderStyle.copyWith(
+              color: isDarkMode ? Colors.white : Colors.black87,
             ),
-          ],
-          letterSpacing: 0.5,
-        ),
+          ),
+        ],
       ),
     );
+  }
+  
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'general notifications':
+        return Icons.notifications_active_outlined;
+      case 'app notifications':
+        return Icons.apps_outlined;
+      case 'content notifications':
+        return Icons.article_outlined;
+      case 'notification time':
+        return Icons.schedule_outlined;
+      default:
+        return Icons.notifications_outlined;
+    }
   }
   
   Widget _buildAnimatedSwitchTile({
@@ -535,60 +542,34 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
       builder: (context, scale, child) {
         return Transform.scale(
           scale: scale,
-          child: Card(
+          child: Container(
             margin: const EdgeInsets.symmetric(vertical: 6.0),
-            elevation: isDarkMode ? 0 : 1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(themeProvider.borderRadius),
-            ),
-            color: isDarkMode 
-                ? Colors.black.withOpacity(0.3)
-                : Colors.white.withOpacity(0.9),
+            decoration: themeProvider.settingsCardDecoration,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
               child: ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: value 
-                        ? (isDarkMode 
-                            ? themeProvider.accentColor.withOpacity(0.3) 
-                            : themeProvider.accentColor.withOpacity(0.1))
-                        : (isDarkMode 
-                            ? Colors.grey.shade800 
-                            : Colors.grey.shade200),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  decoration: themeProvider.getSettingsIconDecoration(isActive: value),
                   child: Icon(
                     icon,
-                    color: value 
-                        ? themeProvider.accentColor
-                        : isDarkMode 
-                            ? Colors.grey.shade400 
-                            : Colors.grey.shade600,
+                    color: value ? themeProvider.accentColor : themeProvider.secondaryIconColor,
                     size: 24,
                   ),
                 ),
                 title: Text(
                   title, 
-                  style: themeProvider.titleMedium.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                  ),
+                  style: themeProvider.settingsTitleStyle,
                 ),
                 subtitle: Text(
                   description, 
-                  style: themeProvider.bodySmall.copyWith(
-                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
-                  ),
+                  style: themeProvider.settingsDescriptionStyle,
                 ),
                 trailing: Switch(
                   value: value,
                   onChanged: onChanged,
                   activeColor: themeProvider.accentColor,
-                  activeTrackColor: isDarkMode 
-                      ? themeProvider.accentColor.withOpacity(0.3)
-                      : themeProvider.accentColor.withOpacity(0.15),
+                  activeTrackColor: themeProvider.accentColor.withOpacity(0.3),
                 ),
               ),
             ),

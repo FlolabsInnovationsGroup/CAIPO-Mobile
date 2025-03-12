@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../theme_provider.dart';
 import '../../widgets/gradient_scaffold.dart';
+import '../../services/firebase_service.dart';
 import 'dart:io';
 
 class AccountProfilePage extends StatefulWidget {
@@ -13,16 +17,19 @@ class AccountProfilePage extends StatefulWidget {
 }
 
 class _AccountProfilePageState extends State<AccountProfilePage> with SingleTickerProviderStateMixin {
-  // User profile data
-  final String username = 'John Doe';
-  final String userEmail = 'johndoe@example.com';
-  final String userPhone = '+1 234 567 890';
-  final String userLocation = 'San Francisco, CA';
-  final String joinDate = 'May 2023';
+  // User profile data - now initialized as null or empty
+  String _username = '';
+  String _userEmail = '';
+  String _userPhone = '';
+  String _userLocation = '';
+  String _joinDate = '';
+  String? _photoURL;
+  bool _isVerified = false;
   
   // Profile image
   File? _selectedImage;
   bool _isImageLoading = false;
+  bool _isLoadingProfile = true;
   
   // For edit mode
   bool _isEditMode = false;
@@ -31,17 +38,20 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
   late TextEditingController _locationController;
   bool _isProcessing = false;
   
-  // Animation controller
+  // Animation controllers
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   
+  // For hover effects
+  int? _hoveredOptionIndex;
+  
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: username);
-    _phoneController = TextEditingController(text: userPhone);
-    _locationController = TextEditingController(text: userLocation);
+    _nameController = TextEditingController();
+    _phoneController = TextEditingController();
+    _locationController = TextEditingController();
     
     _animationController = AnimationController(
       vsync: this,
@@ -63,7 +73,8 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
       ),
     );
     
-    _animationController.forward();
+    // Load user data
+    _loadUserData();
   }
   
   @override
@@ -81,8 +92,58 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
     
     try {
       final ImagePicker picker = ImagePicker();
+      
+      // Show option to choose camera or gallery
+      final source = await showModalBottomSheet<ImageSource>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (BuildContext context) {
+          final themeProvider = Provider.of<ThemeProvider>(context);
+          final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
+          
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDarkMode ? Colors.grey.shade900 : Colors.white,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.camera_alt, color: Colors.blue),
+                  title: Text('Take a photo', style: themeProvider.bodyLarge),
+                  onTap: () => Navigator.pop(context, ImageSource.camera),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library, color: Colors.green),
+                  title: Text('Choose from gallery', style: themeProvider.bodyLarge),
+                  onTap: () => Navigator.pop(context, ImageSource.gallery),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+      
+      if (source == null) {
+        setState(() => _isImageLoading = false);
+        return;
+      }
+      
       final XFile? image = await picker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         maxHeight: 512,
         maxWidth: 512,
         imageQuality: 85,
@@ -97,7 +158,10 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
       // Handle error
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking image: $e')),
+          SnackBar(
+            content: Text('Error picking image: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     } finally {
@@ -113,9 +177,9 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
       _isEditMode = !_isEditMode;
       if (!_isEditMode) {
         // Reset text fields when canceling edit mode
-        _nameController.text = username;
-        _phoneController.text = userPhone;
-        _locationController.text = userLocation;
+        _nameController.text = _username;
+        _phoneController.text = _userPhone;
+        _locationController.text = _userLocation;
       }
     });
   }
@@ -125,7 +189,10 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
     // Validate inputs
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name cannot be empty')),
+        const SnackBar(
+          content: Text('Name cannot be empty'),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -133,28 +200,73 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
     setState(() => _isProcessing = true);
     
     try {
-      // Simulate API call or database update
-      await Future.delayed(const Duration(seconds: 1));
+      final User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not logged in');
+      }
+      
+      // Update display name in Firebase Auth
+      await currentUser.updateDisplayName(_nameController.text.trim());
+      
+      // Update profile picture if selected
+      if (_selectedImage != null) {
+        // In a real app, you would upload to Firebase Storage and get a URL
+        // For this example, we'll skip this step
+        // final String photoUrl = await uploadProfileImage(_selectedImage!, currentUser.uid);
+        // await currentUser.updatePhotoURL(photoUrl);
+      }
+      
+      // Update additional data in Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .set({
+            'displayName': _nameController.text.trim(),
+            'phone': _phoneController.text.trim(),
+            'location': _locationController.text.trim(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+      
+      // Update local state
+      setState(() {
+        _username = _nameController.text.trim();
+        _userPhone = _phoneController.text.trim();
+        _userLocation = _locationController.text.trim();
+      });
       
       // Show success message
       if (mounted) {
+        final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+        
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile updated successfully'),
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 16),
+                const Expanded(child: Text('Profile updated successfully')),
+              ],
+            ),
             backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+            ),
           ),
         );
         
         setState(() {
           _isEditMode = false;
-          // In a real app, you would update the actual user data here
         });
       }
     } catch (e) {
       // Handle error
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating profile: $e')),
+          SnackBar(
+            content: Text('Error updating profile: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
     } finally {
@@ -166,32 +278,61 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
   
   // Show confirmation dialog for signing out
   Future<void> _showSignOutDialog() async {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
+        title: Row(
+          children: [
+            Icon(Icons.logout, color: Colors.red, size: 24),
+            const SizedBox(width: 16),
+            const Text('Sign Out'),
+          ],
+        ),
+        content: const Text('Are you sure you want to sign out? You will need to log in again to access your account.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
+            style: themeProvider.textButtonStyle,
             child: const Text('CANCEL'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('SIGN OUT'),
           ),
         ],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+        ),
       ),
     );
     
     if (confirmed == true) {
-      // In a real app, you would call your auth service to sign out
-      // For now, just navigate back
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('You have been signed out')),
-        );
-        Navigator.of(context).popUntil((route) => route.isFirst);
+      try {
+        await FirebaseService.signOut();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('You have been signed out'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          Navigator.of(context).pushNamedAndRemoveUntil('/auth', (route) => false);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error signing out: $e'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     }
   }
@@ -207,6 +348,125 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
     );
   }
 
+  // Load user data from Firebase
+  Future<void> _loadUserData() async {
+    setState(() => _isLoadingProfile = true);
+    
+    try {
+      // Get current Firebase user
+      final User? currentUser = FirebaseAuth.instance.currentUser;
+      
+      if (currentUser != null) {
+        // Basic data from Firebase Auth
+        setState(() {
+          _username = currentUser.displayName ?? 'User';
+          _userEmail = currentUser.email ?? '';
+          _photoURL = currentUser.photoURL;
+          _isVerified = currentUser.emailVerified;
+          
+          // Initialize controllers with current values
+          _nameController.text = _username;
+        });
+        
+        // Try to get additional data from Firestore
+        try {
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUser.uid)
+              .get();
+          
+          if (userDoc.exists) {
+            final userData = userDoc.data();
+            
+            if (userData != null) {
+              setState(() {
+                _userPhone = userData['phone'] ?? '';
+                _locationController.text = userData['location'] ?? '';
+                _phoneController.text = _userPhone;
+                _userLocation = userData['location'] ?? '';
+                
+                // Format the creation timestamp or use the provided timestamp
+                if (userData['createdAt'] != null) {
+                  final Timestamp createdAt = userData['createdAt'];
+                  final DateTime joinDateTime = createdAt.toDate();
+                  _joinDate = '${_getMonthName(joinDateTime.month)} ${joinDateTime.year}';
+                } else {
+                  // Use Firebase Auth's creation time as fallback
+                  final DateTime? joinDateTime = currentUser.metadata.creationTime;
+                  if (joinDateTime != null) {
+                    _joinDate = '${_getMonthName(joinDateTime.month)} ${joinDateTime.year}';
+                  } else {
+                    _joinDate = 'Unknown';
+                  }
+                }
+              });
+            }
+          } else {
+            // If user document doesn't exist yet, initialize with defaults
+            // and use the Auth creation time
+            final DateTime? joinDateTime = currentUser.metadata.creationTime;
+            if (joinDateTime != null) {
+              setState(() {
+                _joinDate = '${_getMonthName(joinDateTime.month)} ${joinDateTime.year}';
+              });
+            }
+          }
+        } catch (e) {
+          // Handle Firestore errors
+          print('Error loading additional user data: $e');
+          
+          // Still use what we have from Auth
+          final DateTime? joinDateTime = currentUser.metadata.creationTime;
+          if (joinDateTime != null) {
+            setState(() {
+              _joinDate = '${_getMonthName(joinDateTime.month)} ${joinDateTime.year}';
+            });
+          }
+        }
+      } else {
+        // Not logged in - should not happen but handle gracefully
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You are not logged in. Please log in to view your profile.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        
+        // Navigate back to login screen
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            Navigator.of(context).pushNamedAndRemoveUntil('/auth', (route) => false);
+          }
+        });
+      }
+    } catch (e) {
+      // Handle auth errors
+      print('Error loading user profile: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading your profile: $e'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingProfile = false;
+          _animationController.forward();
+        });
+      }
+    }
+  }
+  
+  // Helper to get month name
+  String _getMonthName(int month) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June', 
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return months[month - 1];
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -214,24 +474,19 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
     
     return GradientScaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Account & Profile',
-          style: TextStyle(
-            fontSize: 22, 
-            fontWeight: FontWeight.w600, 
-            color: Colors.white
-          ),
+          style: themeProvider.settingsHeaderStyle,
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: themeProvider.primaryIconColor),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          // Edit button in app bar
           IconButton(
             icon: Icon(
               _isEditMode ? Icons.close : Icons.edit,
-              color: Colors.white,
+              color: themeProvider.primaryIconColor,
             ),
             onPressed: _toggleEditMode,
             tooltip: _isEditMode ? 'Cancel' : 'Edit Profile',
@@ -249,6 +504,38 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Warning banner
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16.0),
+                  padding: const EdgeInsets.all(16.0),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                    border: Border.all(
+                      color: Colors.blue.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: Colors.blue,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Keep your profile information up to date to ensure the best experience.',
+                          style: themeProvider.bodyMedium.copyWith(
+                            color: Colors.blue.shade800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                
                 // Profile Picture Section
                 Center(
                   child: Stack(
@@ -385,25 +672,39 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
                 
                 const SizedBox(height: 32),
                 
-                // Sign Out Button
-                Center(
-                  child: TextButton.icon(
-                    onPressed: _showSignOutDialog,
-                    icon: const Icon(Icons.logout, color: Colors.redAccent),
-                    label: const Text(
-                      'Sign Out',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.redAccent,
+                // Bottom action bar
+                Container(
+                  padding: const EdgeInsets.all(16.0),
+                  decoration: themeProvider.settingsBottomBarDecoration,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton.icon(
+                        onPressed: _showSignOutDialog,
+                        icon: const Icon(Icons.logout, color: Colors.red),
+                        label: const Text('Sign Out'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red,
+                        ),
                       ),
-                    ),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 12, 
-                        horizontal: 24
-                      ),
-                    ),
+                      if (_isEditMode)
+                        ElevatedButton(
+                          onPressed: _isProcessing ? null : _saveChanges,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: themeProvider.accentColor,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: themeProvider.accentColor.withOpacity(0.5),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          ),
+                          child: Text(
+                            'Save Changes',
+                            style: themeProvider.titleMedium.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 
@@ -415,12 +716,12 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8.0),
                       child: Text(
-                        'Member since $joinDate',
+                        'Member since $_joinDate',
                         style: TextStyle(
                           fontSize: 12,
                           color: isDarkMode 
-                              ? Colors.grey.shade400 
-                              : Colors.grey.shade300,
+                              ? themeProvider.secondaryTextColor
+                              : themeProvider.primaryTextColor.withOpacity(0.6),
                         ),
                       ),
                     ),
@@ -434,25 +735,39 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
   }
   
   Widget _buildSectionHeader(String title, bool isDarkMode) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
-          shadows: [
-            Shadow(
-              color: Colors.black.withOpacity(0.3),
-              offset: const Offset(0, 1),
-              blurRadius: 2,
-            ),
-          ],
-          letterSpacing: 0.5,
-        ),
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      margin: const EdgeInsets.symmetric(vertical: 8.0),
+      decoration: themeProvider.settingsHeaderDecoration,
+      child: Row(
+        children: [
+          Icon(
+            _getSectionIcon(title),
+            color: themeProvider.accentColor,
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: themeProvider.settingsHeaderStyle,
+          ),
+        ],
       ),
     );
+  }
+  
+  IconData _getSectionIcon(String section) {
+    switch (section.toLowerCase()) {
+      case 'personal information':
+        return Icons.person_outline;
+      case 'account management':
+        return Icons.admin_panel_settings_outlined;
+      case 'support':
+        return Icons.help_outline;
+      default:
+        return Icons.settings;
+    }
   }
   
   Widget _buildProfileOption({
@@ -462,75 +777,41 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
     required bool isDarkMode,
     required VoidCallback onTap,
   }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: isDarkMode ? 0 : 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: isDarkMode 
-          ? Colors.black.withOpacity(0.3) 
-          : Colors.white.withOpacity(0.9),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isDarkMode 
-                      ? Colors.blueAccent.withOpacity(0.1) 
-                      : Colors.blue.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  icon,
-                  color: Colors.blueAccent,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: isDarkMode ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      value,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDarkMode 
-                            ? Colors.grey.shade400 
-                            : Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                size: 22,
-                color: isDarkMode 
-                    ? Colors.grey.shade500 
-                    : Colors.grey.shade700,
-              ),
-            ],
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8.0),
+      decoration: themeProvider.settingsCardDecoration,
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16.0),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: themeProvider.getSettingsIconDecoration(isActive: true),
+          child: Icon(
+            icon,
+            color: themeProvider.accentColor,
+            size: 20,
           ),
         ),
+        title: Text(
+          title,
+          style: themeProvider.settingsTitleStyle,
+        ),
+        subtitle: Text(
+          value,
+          style: themeProvider.settingsDescriptionStyle,
+        ),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: themeProvider.secondaryIconColor,
+        ),
+        onTap: onTap,
       ),
     );
   }
   
   Widget _buildProfileInfoSection(bool isDarkMode) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    
     return Column(
       children: [
         // User name with verified badge
@@ -567,10 +848,11 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
                       Row(
                         children: [
                           Text(
-                            username,
-                            style: const TextStyle(
+                            _username,
+                            style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
+                              color: themeProvider.primaryTextColor,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -586,9 +868,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
                         'Account is verified',
                         style: TextStyle(
                           fontSize: 13,
-                          color: isDarkMode 
-                              ? Colors.grey.shade400 
-                              : Colors.grey.shade600,
+                          color: themeProvider.secondaryTextColor,
                         ),
                       ),
                     ],
@@ -634,16 +914,15 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
+                        color: Colors.blueAccent,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      userEmail,
+                      _userEmail,
                       style: TextStyle(
                         fontSize: 16,
-                        color: isDarkMode 
-                            ? Colors.white 
-                            : Colors.black87,
+                        color: themeProvider.primaryTextColor,
                       ),
                     ),
                   ],
@@ -691,16 +970,15 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
+                            color: Colors.blueAccent,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          userPhone,
+                          _userPhone,
                           style: TextStyle(
                             fontSize: 16,
-                            color: isDarkMode 
-                                ? Colors.white 
-                                : Colors.black87,
+                            color: themeProvider.primaryTextColor,
                           ),
                         ),
                       ],
@@ -736,16 +1014,15 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
+                            color: Colors.blueAccent,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          userLocation,
+                          _userLocation,
                           style: TextStyle(
                             fontSize: 16,
-                            color: isDarkMode 
-                                ? Colors.white 
-                                : Colors.black87,
+                            color: themeProvider.primaryTextColor,
                           ),
                         ),
                       ],
@@ -761,6 +1038,8 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
   }
   
   Widget _buildEditableProfileSection(bool isDarkMode) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: isDarkMode ? 0 : 1,
@@ -773,12 +1052,12 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Name field
-            const Text(
+            Text(
               'Name',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
+                color: Colors.blueAccent,
               ),
             ),
             const SizedBox(height: 8),
@@ -786,7 +1065,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
               controller: _nameController,
               style: TextStyle(
                 fontSize: 16,
-                color: isDarkMode ? Colors.white : Colors.black87,
+                color: themeProvider.primaryTextColor,
               ),
               decoration: InputDecoration(
                 filled: true,
@@ -798,18 +1077,21 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
                   borderSide: BorderSide.none,
                 ),
                 hintText: 'Enter your name',
-                prefixIcon: const Icon(Icons.person),
+                hintStyle: TextStyle(
+                  color: themeProvider.secondaryTextColor,
+                ),
+                prefixIcon: Icon(Icons.person, color: themeProvider.secondaryIconColor),
               ),
             ),
             
             const SizedBox(height: 16),
             
-            // Phone field
-            const Text(
+            Text(
               'Phone',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
+                color: Colors.blueAccent,
               ),
             ),
             const SizedBox(height: 8),
@@ -817,7 +1099,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
               controller: _phoneController,
               style: TextStyle(
                 fontSize: 16,
-                color: isDarkMode ? Colors.white : Colors.black87,
+                color: themeProvider.primaryTextColor,
               ),
               decoration: InputDecoration(
                 filled: true,
@@ -829,19 +1111,22 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
                   borderSide: BorderSide.none,
                 ),
                 hintText: 'Enter your phone number',
-                prefixIcon: const Icon(Icons.phone),
+                hintStyle: TextStyle(
+                  color: themeProvider.secondaryTextColor,
+                ),
+                prefixIcon: Icon(Icons.phone, color: themeProvider.secondaryIconColor),
               ),
               keyboardType: TextInputType.phone,
             ),
             
             const SizedBox(height: 16),
             
-            // Location field
-            const Text(
+            Text(
               'Location',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
+                color: Colors.blueAccent,
               ),
             ),
             const SizedBox(height: 8),
@@ -849,7 +1134,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
               controller: _locationController,
               style: TextStyle(
                 fontSize: 16,
-                color: isDarkMode ? Colors.white : Colors.black87,
+                color: themeProvider.primaryTextColor,
               ),
               decoration: InputDecoration(
                 filled: true,
@@ -861,7 +1146,10 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
                   borderSide: BorderSide.none,
                 ),
                 hintText: 'Enter your location',
-                prefixIcon: const Icon(Icons.location_on),
+                hintStyle: TextStyle(
+                  color: themeProvider.secondaryTextColor,
+                ),
+                prefixIcon: Icon(Icons.location_on, color: themeProvider.secondaryIconColor),
               ),
             ),
             
