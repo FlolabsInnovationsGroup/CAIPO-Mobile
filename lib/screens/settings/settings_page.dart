@@ -19,18 +19,29 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   String _searchQuery = '';
   late AnimationController _animationController;
   late Animation<double> _fadeInAnimation;
+  
+  // For animation of list items
+  final List<Animation<double>> _itemAnimations = [];
+  
+  // Keep track of recently accessed settings
+  final List<String> _recentSettings = [];
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 800),
     );
-    _fadeInAnimation = CurvedAnimation(parent: _animationController, curve: Curves.easeIn);
+    _fadeInAnimation = CurvedAnimation(
+      parent: _animationController, 
+      curve: Curves.easeIn
+    );
+    
     _animationController.forward();
   }
 
@@ -38,7 +49,20 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
   void dispose() {
     _animationController.dispose();
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+  
+  void _addToRecent(String title) {
+    // Add to recent if not already there
+    if (!_recentSettings.contains(title)) {
+      setState(() {
+        _recentSettings.insert(0, title);
+        if (_recentSettings.length > 3) {
+          _recentSettings.removeLast();
+        }
+      });
+    }
   }
 
   @override
@@ -47,18 +71,20 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
     final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
 
     final List<Map<String, dynamic>> settingsOptions = [
-      {'title': 'Account & Profile', 'icon': Icons.person, 'page': const AccountProfilePage()},
-      {'title': 'AI Preferences', 'icon': Icons.smart_toy, 'page': const AIPreferencesPage()},
-      {'title': 'Notifications & Reminders', 'icon': Icons.notifications, 'page': const NotificationsPage()},
-      {'title': 'Privacy & Data', 'icon': Icons.lock, 'page': const PrivacyDataPage()},
-      {'title': 'Appearance & Display', 'icon': Icons.format_paint, 'page': const AppearanceDisplayPage()},
-      {'title': 'Advanced Settings', 'icon': Icons.settings, 'page': const AdvancedSettingsPage()},
-      {'title': 'About & Support', 'icon': Icons.help, 'page': const AboutSupportPage()},
+      {'title': 'Account & Profile', 'icon': Icons.person, 'page': const AccountProfilePage(), 'description': 'Manage your personal information'},
+      {'title': 'AI Preferences', 'icon': Icons.smart_toy, 'page': const AIPreferencesPage(), 'description': 'Customize how CAIPO interacts with you'},
+      {'title': 'Notifications & Reminders', 'icon': Icons.notifications, 'page': const NotificationsPage(), 'description': 'Control alerts and reminders'},
+      {'title': 'Privacy & Data', 'icon': Icons.shield, 'page': const PrivacyDataPage(), 'description': 'Manage data sharing and privacy options'},
+      {'title': 'Appearance & Display', 'icon': Icons.palette, 'page': const AppearanceDisplayPage(), 'description': 'Customize your app appearance'},
+      {'title': 'Advanced Settings', 'icon': Icons.build, 'page': const AdvancedSettingsPage(), 'description': 'Developer options and advanced features'},
+      {'title': 'About & Support', 'icon': Icons.help_outline, 'page': const AboutSupportPage(), 'description': 'Get help and learn about CAIPO'},
       {
-        'title': 'Dark Mode',
-        'icon': Icons.dark_mode,
+        'title': 'Theme',
+        'icon': isDarkMode ? Icons.dark_mode : Icons.light_mode,
+        'description': isDarkMode ? 'Switch to light mode' : 'Switch to dark mode',
         'widget': Switch(
           value: themeProvider.themeMode == ThemeMode.dark,
+          activeColor: Colors.blueAccent,
           onChanged: (value) {
             setState(() {
               themeProvider.toggleTheme(value);
@@ -68,36 +94,67 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
       },
     ];
 
-    final filteredOptions = settingsOptions.where((option) =>
-        option['title'].toString().toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+    // Initialize animations for each list item if needed
+    if (_itemAnimations.isEmpty && settingsOptions.isNotEmpty) {
+      for (int i = 0; i < settingsOptions.length; i++) {
+        _itemAnimations.add(
+          Tween<double>(begin: 0.0, end: 1.0).animate(
+            CurvedAnimation(
+              parent: _animationController,
+              curve: Interval(
+                0.1 + (i * 0.05),  // Staggered start
+                1.0,
+                curve: Curves.easeOut,
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
+    // Filter options based on search query
+    final filteredOptions = _searchQuery.isEmpty
+        ? settingsOptions
+        : settingsOptions.where((option) =>
+            option['title'].toString().toLowerCase().contains(_searchQuery.toLowerCase()) ||
+            (option['description'] != null && 
+             option['description'].toString().toLowerCase().contains(_searchQuery.toLowerCase()))
+          ).toList();
 
     return GradientScaffold(
       appBar: AppBar(
         title: Text(
-          'Settings', 
+          'Settings',
           style: TextStyle(
-            fontSize: 22, 
-            fontWeight: FontWeight.w600, 
-            color: isDarkMode ? Colors.white : Colors.black87,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            shadows: [
+              Shadow(
+                color: Colors.black.withOpacity(0.3),
+                offset: const Offset(0, 2),
+                blurRadius: 4,
+              ),
+            ],
           ),
         ),
         leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back, 
-            size: 26, 
-            color: isDarkMode ? Colors.white : Colors.black87,
-          ),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
+        backgroundColor: isDarkMode 
+            ? Colors.black26 
+            : const Color(0xFF2196F3).withOpacity(0.8),
         elevation: 0,
-        backgroundColor: Colors.transparent,
       ),
       body: FadeTransition(
         opacity: _fadeInAnimation,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Enhanced search bar
             Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: const EdgeInsets.all(16.0),
               child: TextField(
                 controller: _searchController,
                 style: TextStyle(
@@ -112,7 +169,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   ),
                   filled: true,
                   fillColor: isDarkMode 
-                      ? Colors.black.withAlpha(77) // 0.3 * 255 ≈ 77
+                      ? Colors.black.withAlpha(77)
                       : Colors.grey.shade200,
                   prefixIcon: Icon(
                     Icons.search,
@@ -120,6 +177,21 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                         ? Colors.grey.shade400 
                         : Colors.grey.shade600,
                   ),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(
+                            Icons.clear,
+                            color: isDarkMode 
+                                ? Colors.grey.shade400 
+                                : Colors.grey.shade600,
+                          ),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                            FocusScope.of(context).unfocus();
+                          },
+                        )
+                      : null,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -136,7 +208,7 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(
-                      color: Colors.blueAccent.withAlpha(isDarkMode ? 179 : 255), // 0.7 or 1.0 * 255
+                      color: Colors.blueAccent.withAlpha(isDarkMode ? 179 : 255),
                       width: 2,
                     ),
                   ),
@@ -146,68 +218,246 @@ class _SettingsScreenState extends State<SettingsScreen> with SingleTickerProvid
                 },
               ),
             ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: filteredOptions.length,
-                itemBuilder: (context, index) {
-                  final option = filteredOptions[index];
-                  return Semantics(
-                    button: true,
-                    label: 'Settings option for ${option['title']}',
-                    child: Card(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 12, 
-                        vertical: 6
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)
-                      ),
-                      color: isDarkMode 
-                          ? Colors.black.withAlpha(77) // 0.3 * 255 ≈ 77
-                          : Colors.white,
-                      elevation: isDarkMode ? 0 : 1,
-                      child: ListTile(
-                        leading: Icon(
-                          option['icon'],
-                          size: 28,
-                          color: isDarkMode 
-                              ? Colors.blueAccent.shade100 
-                              : Colors.blueAccent,
+            
+            // Recently accessed settings
+            if (_recentSettings.isNotEmpty && _searchQuery.isEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.only(left: 20.0, top: 8.0, bottom: 12.0),
+                child: Text(
+                  'Recently Accessed',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
+                  ),
+                ),
+              ),
+              SizedBox(
+                height: 40,
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _recentSettings.length,
+                  itemBuilder: (context, index) {
+                    final recentTitle = _recentSettings[index];
+                    final recentOption = settingsOptions.firstWhere(
+                      (option) => option['title'] == recentTitle,
+                      orElse: () => {'title': recentTitle},
+                    );
+                    
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: ActionChip(
+                        avatar: recentOption['icon'] != null
+                            ? Icon(
+                                recentOption['icon'],
+                                size: 16,
+                                color: isDarkMode ? Colors.white70 : Colors.black54,
+                              )
+                            : null,
+                        label: Text(recentTitle),
+                        backgroundColor: isDarkMode
+                            ? Colors.grey.shade800
+                            : Colors.grey.shade200,
+                        labelStyle: TextStyle(
+                          color: isDarkMode ? Colors.white : Colors.black87,
                         ),
-                        title: Text(
-                          option['title'],
+                        onPressed: () {
+                          if (recentOption['page'] != null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => recentOption['page'],
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            
+            // Settings category header - only show if not searching
+            if (_searchQuery.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 20.0, top: 8.0, bottom: 12.0),
+                child: Text(
+                  'All Settings',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
+                  ),
+                ),
+              ),
+            
+            // No results message
+            if (filteredOptions.isEmpty)
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.search_off,
+                        size: 48,
+                        color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No settings found',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Try a different search term',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            
+            // Settings list
+            if (filteredOptions.isNotEmpty)
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  itemCount: filteredOptions.length,
+                  itemBuilder: (context, index) {
+                    final option = filteredOptions[index];
+                    
+                    return FadeTransition(
+                      opacity: _itemAnimations.length > index
+                          ? _itemAnimations[index]
+                          : const AlwaysStoppedAnimation(1.0),
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0.05, 0),
+                          end: Offset.zero,
+                        ).animate(
+                          _itemAnimations.length > index
+                              ? _itemAnimations[index]
+                              : const AlwaysStoppedAnimation(1.0),
+                        ),
+                        child: _buildSettingCard(
+                          option,
+                          isDarkMode,
+                          onTap: () {
+                            if (option['page'] != null) {
+                              _addToRecent(option['title']);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => option['page'],
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildSettingCard(Map<String, dynamic> option, bool isDarkMode, {required VoidCallback onTap}) {
+    return Semantics(
+      button: true,
+      label: 'Settings option for ${option['title']}',
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        elevation: isDarkMode ? 0 : 2,
+        shadowColor: Colors.black26,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        color: isDarkMode 
+            ? Colors.black.withOpacity(0.3) 
+            : Colors.white.withOpacity(0.9),
+        child: InkWell(
+          onTap: option['page'] != null ? onTap : null,
+          borderRadius: BorderRadius.circular(16),
+          splashColor: Colors.blueAccent.withOpacity(0.1),
+          highlightColor: Colors.blueAccent.withOpacity(0.05),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                // Icon with background
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: isDarkMode 
+                        ? Colors.blueAccent.withOpacity(0.2) 
+                        : Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    option['icon'] ?? Icons.settings,
+                    size: 24,
+                    color: isDarkMode ? Colors.blueAccent : Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Title and description
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        option['title'],
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: isDarkMode ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      if (option['description'] != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          option['description'],
                           style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 13,
                             color: isDarkMode 
-                                ? Colors.white 
-                                : Colors.black87,
+                                ? Colors.grey.shade400 
+                                : Colors.grey.shade700,
                           ),
                         ),
-                        trailing: option.containsKey('widget')
-                            ? option['widget']
-                            : Icon(
-                                Icons.arrow_forward_ios,
-                                size: 18,
-                                color: isDarkMode 
-                                    ? Colors.grey.shade400 
-                                    : Colors.grey.shade600,
-                              ),
-                        onTap: option['page'] != null
-                            ? () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => option['page']
-                                  ),
-                                )
-                            : null,
+                      ],
+                    ],
+                  ),
+                ),
+                // Action (switch or arrow)
+                option.containsKey('widget')
+                    ? option['widget']
+                    : Icon(
+                        Icons.chevron_right,
+                        size: 16,
+                        color: isDarkMode 
+                            ? Colors.grey.shade600 
+                            : Colors.grey.shade400,
                       ),
-                    ),
-                  );
-                },
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

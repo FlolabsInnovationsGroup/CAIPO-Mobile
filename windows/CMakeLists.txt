@@ -1,10 +1,25 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
-project(caipoappv0 LANGUAGES CXX)
+project(caipo_mobile LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "caipoappv0")
+set(BINARY_NAME "caipo_mobile")
+
+# Configure parallel compilation and PDB handling
+if(MSVC)
+    # Force synchronous PDB writes
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /FS")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /FS")
+    
+    # Optimize PDB generation
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /DEBUG:FASTLINK")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /DEBUG:FASTLINK")
+    
+    # Enable parallel compilation
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
+endif()
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
