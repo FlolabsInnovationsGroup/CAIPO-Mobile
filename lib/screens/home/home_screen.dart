@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:flutter/gestures.dart';
-import '../ai/openai_service.dart'; // Import OpenAI Service
-import '../../theme_provider.dart'; // Ensure theme switching works
+import '../../services/openai_service.dart';
+import '../../theme_provider.dart';
 import '../../widgets/gradient_scaffold.dart';
-import '../../services/firebase_service.dart'; // Import Firebase Service
+import '../../services/firebase_service.dart';
+import '../../widgets/recent_recordings_sheet.dart';
+import '../../screens/ai/transcription_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:intl/intl.dart';
@@ -860,50 +862,44 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       tooltip: 'Send message',
                     ),
                   )
-                : GestureDetector(
-                    onTap: () {
-                      Navigator.pushNamed(context, '/record');
-                    },
-                    onLongPress: () {
-                      setState(() {
-                        _isRecording = true;
-                      });
-                      // Show recording feedback
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Hold to record, release to send'),
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                    onLongPressEnd: (_) {
-                      setState(() {
-                        _isRecording = false;
-                      });
-                      // In a real app, you'd process the recording here
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Voice message recorded feature coming soon'),
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      height: 48,
-                      width: 48,
-                      decoration: BoxDecoration(
-                        color: _isRecording ? Colors.red : Colors.blueAccent,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _isRecording ? Icons.mic : Icons.mic_none,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                  ),
+                : _buildTranscriptionButton(),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTranscriptionButton() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
+    
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, '/record');
+      },
+      onLongPress: () {
+        _showTranscriptionOptions();
+      },
+      child: Container(
+        height: 48,
+        width: 48,
+        decoration: BoxDecoration(
+          color: _isRecording ? Colors.red : Colors.blueAccent,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: (_isRecording ? Colors.red : Colors.blueAccent).withOpacity(0.3),
+              spreadRadius: 2,
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(
+          _isRecording ? Icons.mic : Icons.mic_none,
+          color: Colors.white,
+          size: 24,
+        ),
       ),
     );
   }
@@ -1195,6 +1191,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildImagePreview() {
+    if (_selectedImage == null) return const SizedBox.shrink();
+    
     return Container(
       height: 100,
       margin: const EdgeInsets.all(8.0),
@@ -1226,6 +1224,32 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _showTranscriptionOptions() async {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        controller: DraggableScrollableController(),
+        builder: (context, scrollController) => RecentRecordingsSheet(
+          scrollController: scrollController,
+          onRecordingSelected: (String path) {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => TranscriptionScreen(audioFilePath: path),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

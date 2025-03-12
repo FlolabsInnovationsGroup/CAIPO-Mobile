@@ -41,17 +41,20 @@ dependencies:
   flutter_dotenv: ^5.2.1
   file_picker: ^9.0.2
   speech_to_text: ^7.0.0
+  xml: ^6.5.0
   
   # APIs
   dialogflow_flutter: 1.0.0
   googleapis_auth: 1.4.1
-  flutter_sound: ^9.25.4
+  flutter_sound: ^9.2.13
   image_picker: ^1.0.7
   shared_preferences: ^2.5.2
   audio_waveforms: ^1.0.4
   video_player: ^2.8.3
   permission_handler: ^11.3.0
   path: ^1.9.0
+  share_plus: ^7.2.1
+  path_provider: ^2.1.2
 
 dev_dependencies:
   flutter_test:

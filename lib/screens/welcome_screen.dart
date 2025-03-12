@@ -40,9 +40,21 @@ class WelcomeScreenState extends State<WelcomeScreen>
   @override
   void initState() {
     super.initState();
+    _initializeAnimations();
+    _checkAuthStatus();
+  }
+  
+  void _initializeAnimations() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    
+    // Use the animation speed from theme if animations are enabled
+    final animDuration = themeProvider.useAnimations 
+        ? Duration(milliseconds: (5000 * (themeProvider.animationSpeedName == 'slow' ? 1.5 : themeProvider.animationSpeedName == 'fast' ? 0.7 : 1.0)).round()) 
+        : const Duration(seconds: 5);
+    
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 5),
+      duration: animDuration,
     );
     
     _fadeAnimation = CurvedAnimation(
@@ -80,9 +92,6 @@ class WelcomeScreenState extends State<WelcomeScreen>
         _startFeatureCycling();
       }
     });
-
-    // Check authentication status when screen is shown
-    _checkAuthStatus();
   }
   
   void _startFeatureCycling() {
@@ -148,10 +157,10 @@ class WelcomeScreenState extends State<WelcomeScreen>
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
     final size = MediaQuery.of(context).size;
 
     return GradientScaffold(
+      usePatternOverlay: true, // Add subtle texture for depth
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -160,291 +169,96 @@ class WelcomeScreenState extends State<WelcomeScreen>
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // App logo with advanced animations
-                ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Hero(
-                      tag: 'app_logo',
-                      child: Container(
-                        height: 120,
-                        width: 120,
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.blue.withAlpha(isDarkMode ? 40 : 60),
-                              blurRadius: 20,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: Image.asset(
-                          'assets/logo.png',
-                          height: 100,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                _buildAnimatedLogo(themeProvider),
                 const SizedBox(height: 20),
                 
                 // App name with shine animation
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: SlideTransition(
-                    position: _slideAnimation,
-                    child: ShaderMask(
-                      shaderCallback: (Rect bounds) {
-                        return LinearGradient(
-                          colors: [
-                            Colors.blueAccent.shade100,
-                            Colors.white,
-                            Colors.blueAccent.shade100,
-                          ],
-                          stops: const [0.0, 0.5, 1.0],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          tileMode: TileMode.clamp,
-                        ).createShader(bounds);
-                      },
-                      child: Text(
-                        'CAIPO by FLOMAD',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: isDarkMode ? Colors.white : Colors.black87,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black.withOpacity(0.1),
-                              offset: const Offset(0, 2),
-                              blurRadius: 4,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                _buildAppName(themeProvider),
                 const SizedBox(height: 10),
                 
                 // Tagline with feature rotation
-                FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Column(
-                    children: [
-                      Text(
-                        'Your personalized AI companion',
-                        style: TextStyle(
-                          color: isDarkMode 
-                              ? Colors.grey.shade300 
-                              : Colors.grey.shade700,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      AnimatedOpacity(
-                        opacity: _showFeatures ? 1.0 : 0.0,
-                        duration: const Duration(milliseconds: 400),
-                        child: Container(
-                          height: 24,
-                          width: size.width * 0.8,
-                          alignment: Alignment.center,
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 400),
-                            transitionBuilder: (Widget child, Animation<double> animation) {
-                              return FadeTransition(
-                                opacity: animation,
-                                child: SlideTransition(
-                                  position: Tween<Offset>(
-                                    begin: const Offset(0.0, 0.2),
-                                    end: Offset.zero,
-                                  ).animate(animation),
-                                  child: child,
-                                ),
-                              );
-                            },
-                            child: Text(
-                              _features[_currentFeatureIndex],
-                              key: ValueKey<int>(_currentFeatureIndex),
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.blueAccent.shade100,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                _buildTaglineAndFeatures(themeProvider, size),
                 const SizedBox(height: 40),
                 
                 // Login button with enhanced animations
-                ScaleTransition(
-                  scale: _buttonScaleAnimation,
-                  child: MouseRegion(
-                    onEnter: (_) => setState(() => _isHoveringLogin = true),
-                    onExit: (_) => setState(() => _isHoveringLogin = false),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      width: MediaQuery.of(context).size.width * 0.8,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.blue.withAlpha(isDarkMode ? 40 : 60),
-                            spreadRadius: _isHoveringLogin ? 2 : 1,
-                            blurRadius: _isHoveringLogin ? 12 : 8,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.blueAccent.shade700,
-                            Colors.blueAccent,
-                          ],
-                        ),
-                      ),
-                      transform: Matrix4.identity()..scale(_isHoveringLogin ? 1.02 : 1.0),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => _handleNavigation(),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Center(
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 150),
-                                  width: _isHoveringLogin ? 30 : 0,
-                                  child: _isHoveringLogin
-                                      ? const Icon(
-                                          Icons.login,
-                                          color: Colors.white,
-                                          size: 20,
-                                        )
-                                      : null,
-                                ),
-                                Text(
-                                  'LOG IN',
-                                  style: TextStyle(
-                                    color: Colors.white.withAlpha(isDarkMode ? 242 : 255),
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1.2,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                _buildLoginButton(themeProvider),
                 const SizedBox(height: 20),
                 
                 // Sign up button with enhanced animations
-                ScaleTransition(
-                  scale: _buttonScaleAnimation,
-                  child: MouseRegion(
-                    onEnter: (_) => setState(() => _isHoveringSignup = true),
-                    onExit: (_) => setState(() => _isHoveringSignup = false),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      transform: Matrix4.identity()..scale(_isHoveringSignup ? 1.02 : 1.0),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(30),
-                        border: Border.all(
-                          color: _isHoveringSignup
-                              ? Colors.blueAccent
-                              : Colors.transparent,
-                          width: 1,
-                        ),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => _handleNavigation(isSignUp: true),
-                          borderRadius: BorderRadius.circular(30),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24, 
-                              vertical: 12
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 150),
-                                  width: _isHoveringSignup ? 24 : 0,
-                                  child: _isHoveringSignup
-                                      ? Icon(
-                                          Icons.person_add,
-                                          color: isDarkMode 
-                                              ? Colors.white 
-                                              : Colors.black87,
-                                          size: 18,
-                                        )
-                                      : null,
-                                ),
-                                Text(
-                                  'Get Started',
-                                  style: TextStyle(
-                                    color: _isHoveringSignup
-                                        ? Colors.blueAccent
-                                        : isDarkMode 
-                                            ? Colors.grey.shade300 
-                                            : Colors.grey.shade700,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                _buildSignUpButton(themeProvider),
                 
                 // Footer information
                 const SizedBox(height: 50),
                 
                 // Version info with additional links
-                FadeTransition(
-                  opacity: CurvedAnimation(
-                    parent: _animationController,
-                    curve: const Interval(0.7, 1.0),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Version 1.0.0',
-                        style: TextStyle(
-                          color: isDarkMode 
-                              ? Colors.grey.shade500 
-                              : Colors.grey.shade600,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      _buildFooterLink('Privacy', context),
-                      const SizedBox(width: 16),
-                      _buildFooterLink('Terms', context),
-                      const SizedBox(width: 16),
-                      _buildFooterLink('Help', context),
-                    ],
-                  ),
+                _buildFooterSection(themeProvider),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildAnimatedLogo(ThemeProvider themeProvider) {
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Hero(
+          tag: 'app_logo',
+          child: Container(
+            height: 120,
+            width: 120,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: themeProvider.accentColor.withOpacity(0.3),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Image.asset(
+              'assets/logo.png',
+              height: 100,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildAppName(ThemeProvider themeProvider) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: ShaderMask(
+          shaderCallback: (Rect bounds) {
+            return LinearGradient(
+              colors: [
+                themeProvider.accentColor.withOpacity(0.7),
+                Colors.white,
+                themeProvider.accentColor.withOpacity(0.7),
+              ],
+              stops: const [0.0, 0.5, 1.0],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              tileMode: TileMode.clamp,
+            ).createShader(bounds);
+          },
+          child: Text(
+            'CAIPO by FLOMAD',
+            style: themeProvider.displaySmall.copyWith(
+              color: Colors.white,
+              shadows: [
+                Shadow(
+                  color: Colors.black.withOpacity(0.2),
+                  offset: const Offset(0, 2),
+                  blurRadius: 4,
                 ),
               ],
             ),
@@ -454,7 +268,211 @@ class WelcomeScreenState extends State<WelcomeScreen>
     );
   }
   
-  Widget _buildFooterLink(String text, BuildContext context) {
+  Widget _buildTaglineAndFeatures(ThemeProvider themeProvider, Size size) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: Column(
+        children: [
+          Text(
+            'Your personalized AI companion',
+            style: themeProvider.titleLarge.copyWith(
+              color: themeProvider.secondaryTextColor,
+            ),
+          ),
+          const SizedBox(height: 10),
+          AnimatedOpacity(
+            opacity: _showFeatures ? 1.0 : 0.0,
+            duration: themeProvider.animationDurationMedium,
+            child: Container(
+              height: 24,
+              width: size.width * 0.8,
+              alignment: Alignment.center,
+              child: AnimatedSwitcher(
+                duration: themeProvider.animationDurationMedium,
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0.0, 0.2),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  );
+                },
+                child: Text(
+                  _features[_currentFeatureIndex],
+                  key: ValueKey<int>(_currentFeatureIndex),
+                  style: themeProvider.titleMedium.copyWith(
+                    color: themeProvider.accentColor.withOpacity(0.9),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildLoginButton(ThemeProvider themeProvider) {
+    return ScaleTransition(
+      scale: _buttonScaleAnimation,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHoveringLogin = true),
+        onExit: (_) => setState(() => _isHoveringLogin = false),
+        child: AnimatedContainer(
+          duration: themeProvider.animationDurationShort,
+          width: MediaQuery.of(context).size.width * 0.8,
+          height: 52,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+            boxShadow: [
+              BoxShadow(
+                color: themeProvider.accentColor.withOpacity(0.3),
+                spreadRadius: _isHoveringLogin ? 2 : 1,
+                blurRadius: _isHoveringLogin ? 12 : 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                themeProvider.accentColor.withOpacity(0.9),
+                themeProvider.accentColor,
+              ],
+            ),
+          ),
+          transform: Matrix4.identity()..scale(_isHoveringLogin ? 1.02 : 1.0),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _handleNavigation(),
+              borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+              child: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedContainer(
+                      duration: themeProvider.animationDurationShort,
+                      width: _isHoveringLogin ? 30 : 0,
+                      child: _isHoveringLogin
+                          ? const Icon(
+                              Icons.login,
+                              color: Colors.white,
+                              size: 20,
+                            )
+                          : null,
+                    ),
+                    Text(
+                      'LOG IN',
+                      style: themeProvider.titleLarge.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildSignUpButton(ThemeProvider themeProvider) {
+    return ScaleTransition(
+      scale: _buttonScaleAnimation,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHoveringSignup = true),
+        onExit: (_) => setState(() => _isHoveringSignup = false),
+        child: AnimatedContainer(
+          duration: themeProvider.animationDurationShort,
+          transform: Matrix4.identity()..scale(_isHoveringSignup ? 1.02 : 1.0),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(
+              color: _isHoveringSignup
+                  ? themeProvider.accentColor
+                  : Colors.transparent,
+              width: 1,
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => _handleNavigation(isSignUp: true),
+              borderRadius: BorderRadius.circular(30),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24, 
+                  vertical: 12
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedContainer(
+                      duration: themeProvider.animationDurationShort,
+                      width: _isHoveringSignup ? 24 : 0,
+                      child: _isHoveringSignup
+                          ? Icon(
+                              Icons.person_add,
+                              color: themeProvider.textColor,
+                              size: 18,
+                            )
+                          : null,
+                    ),
+                    Text(
+                      'Get Started',
+                      style: themeProvider.titleMedium.copyWith(
+                        color: _isHoveringSignup
+                            ? themeProvider.accentColor
+                            : themeProvider.secondaryTextColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildFooterSection(ThemeProvider themeProvider) {
+    return FadeTransition(
+      opacity: CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.7, 1.0),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Version 1.0.0',
+            style: themeProvider.bodySmall.copyWith(
+              color: themeProvider.secondaryTextColor,
+            ),
+          ),
+          const SizedBox(width: 16),
+          _buildFooterLink('Privacy', context, themeProvider),
+          const SizedBox(width: 16),
+          _buildFooterLink('Terms', context, themeProvider),
+          const SizedBox(width: 16),
+          _buildFooterLink('Help', context, themeProvider),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildFooterLink(String text, BuildContext context, ThemeProvider themeProvider) {
     return InkWell(
       onTap: () {
         showDialog(
@@ -473,9 +491,8 @@ class WelcomeScreenState extends State<WelcomeScreen>
       },
       child: Text(
         text,
-        style: TextStyle(
-          color: Colors.blueAccent.withAlpha(204),
-          fontSize: 12,
+        style: themeProvider.bodySmall.copyWith(
+          color: themeProvider.accentColor.withOpacity(0.8),
           decoration: TextDecoration.underline,
         ),
       ),

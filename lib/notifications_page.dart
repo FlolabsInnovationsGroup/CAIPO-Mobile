@@ -11,25 +11,63 @@ class NotificationsPage extends StatefulWidget {
 }
 
 class _NotificationsPageState extends State<NotificationsPage> with SingleTickerProviderStateMixin {
-  // Notification settings
-  bool pushNotifications = true;
-  bool emailNotifications = false;
-  bool reminders = true;
-  bool weeklyReports = false;
-  bool appUpdates = true;
-  bool transcriptionAlerts = true;
+  // Grouped notification settings
+  Map<String, Map<String, bool>> _notificationGroups = {
+    'General': {
+      'Push Notifications': true,
+      'Email Notifications': false,
+    },
+    'App': {
+      'Reminders': true,
+      'Weekly Reports': false,
+    },
+    'Content': {
+      'App Updates': true,
+      'Transcription Alerts': true,
+    }
+  };
+  
+  // Icons for each notification type
+  final Map<String, IconData> _notificationIcons = {
+    'Push Notifications': Icons.notifications_active,
+    'Email Notifications': Icons.email,
+    'Reminders': Icons.access_time,
+    'Weekly Reports': Icons.summarize,
+    'App Updates': Icons.system_update,
+    'Transcription Alerts': Icons.record_voice_over,
+  };
+  
+  // Descriptions for each notification type
+  final Map<String, String> _notificationDescriptions = {
+    'Push Notifications': 'Receive notifications directly to your device.',
+    'Email Notifications': 'Receive notifications via email.',
+    'Reminders': 'Get reminded about pending tasks and actions.',
+    'Weekly Reports': 'Receive a summary of your activity every week.',
+    'App Updates': 'Be notified when new features are available.',
+    'Transcription Alerts': 'Get notified when your transcriptions are ready.',
+  };
   
   // Time preferences
   String selectedTimeRange = "Anytime";
   final List<String> timeRanges = ["Anytime", "8 AM - 8 PM", "9 AM - 5 PM", "Custom"];
+  TimeOfDay _startTime = const TimeOfDay(hour: 9, minute: 0);
+  TimeOfDay _endTime = const TimeOfDay(hour: 17, minute: 0);
   
   // Track if there are unsaved changes
   bool haveUnsavedChanges = false;
   bool showConfirmation = false;
   
-  // Animation controller
+  // Animation controllers
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+  
+  // Track expanded categories
+  Set<String> _expandedCategories = {'General', 'App', 'Content'};
+  
+  // Tab controller for notification types
+  int _selectedTab = 0;
+  final List<String> _tabs = ['All', 'Messages', 'Transcriptions', 'Updates'];
   
   @override
   void initState() {
@@ -43,6 +81,14 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
       parent: _animationController,
       curve: Curves.easeIn,
     );
+    
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeOutCubic,
+    ));
     
     _animationController.forward();
     
@@ -66,29 +112,21 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
   }
   
   // Update a notification setting
-  void _updateSetting(String setting, bool value) {
+  void _updateSetting(String category, String setting, bool value) {
     setState(() {
-      switch (setting) {
-        case 'push':
-          pushNotifications = value;
-          break;
-        case 'email':
-          emailNotifications = value;
-          break;
-        case 'reminders':
-          reminders = value;
-          break;
-        case 'weekly':
-          weeklyReports = value;
-          break;
-        case 'updates':
-          appUpdates = value;
-          break;
-        case 'transcription':
-          transcriptionAlerts = value;
-          break;
-      }
+      _notificationGroups[category]![setting] = value;
       haveUnsavedChanges = true;
+    });
+  }
+  
+  // Toggle a category expansion state
+  void _toggleCategory(String category) {
+    setState(() {
+      if (_expandedCategories.contains(category)) {
+        _expandedCategories.remove(category);
+      } else {
+        _expandedCategories.add(category);
+      }
     });
   }
   
@@ -112,6 +150,41 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
     });
   }
   
+  // Select time
+  Future<void> _selectTime(BuildContext context, bool isStartTime) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: isStartTime ? _startTime : _endTime,
+      builder: (BuildContext context, Widget? child) {
+        // Use theme provider to style the time picker
+        final themeProvider = Provider.of<ThemeProvider>(context);
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: themeProvider.accentColor,
+              onPrimary: Colors.white,
+              surface: themeProvider.modalBackgroundColor,
+              onSurface: themeProvider.primaryTextColor,
+            ),
+            dialogBackgroundColor: themeProvider.modalBackgroundColor,
+          ),
+          child: child!,
+        );
+      },
+    );
+    
+    if (picked != null) {
+      setState(() {
+        if (isStartTime) {
+          _startTime = picked;
+        } else {
+          _endTime = picked;
+        }
+        haveUnsavedChanges = true;
+      });
+    }
+  }
+  
   // Check for unsaved changes before navigating back
   Future<bool> _onWillPop() async {
     if (!haveUnsavedChanges) {
@@ -120,22 +193,38 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
     
     final shouldPop = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Unsaved Changes'),
-        content: const Text(
-          'You have unsaved notification settings. Do you want to discard these changes?'
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('CANCEL'),
+      builder: (context) {
+        final themeProvider = Provider.of<ThemeProvider>(context);
+        
+        return AlertDialog(
+          title: Text(
+            'Unsaved Changes',
+            style: themeProvider.headlineMedium,
           ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('DISCARD'),
+          content: Text(
+            'You have unsaved notification settings. Do you want to discard these changes?',
+            style: themeProvider.bodyMedium,
           ),
-        ],
-      ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              style: themeProvider.textButtonStyle,
+              child: const Text('CANCEL'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('DISCARD'),
+            ),
+          ],
+        );
+      },
     );
     
     return shouldPop ?? false;
@@ -205,64 +294,70 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   children: [
-                    _buildCategoryHeader('General Notifications', isDarkMode),
+                    _buildCategoryHeader('General Notifications', isDarkMode, themeProvider),
                     _buildAnimatedSwitchTile(
                       title: 'Push Notifications',
                       description: 'Receive notifications directly to your device.',
                       icon: Icons.notifications_active,
-                      value: pushNotifications,
+                      value: _notificationGroups['General']!['Push Notifications']!,
                       isDarkMode: isDarkMode,
-                      onChanged: (val) => _updateSetting('push', val),
+                      themeProvider: themeProvider,
+                      onChanged: (val) => _updateSetting('General', 'Push Notifications', val),
                     ),
                     _buildAnimatedSwitchTile(
                       title: 'Email Notifications',
                       description: 'Receive notifications via email.',
                       icon: Icons.email,
-                      value: emailNotifications,
+                      value: _notificationGroups['General']!['Email Notifications']!,
                       isDarkMode: isDarkMode,
-                      onChanged: (val) => _updateSetting('email', val),
+                      themeProvider: themeProvider,
+                      onChanged: (val) => _updateSetting('General', 'Email Notifications', val),
                     ),
                     
-                    _buildCategoryHeader('App Notifications', isDarkMode),
+                    _buildCategoryHeader('App Notifications', isDarkMode, themeProvider),
                     _buildAnimatedSwitchTile(
                       title: 'Reminders',
                       description: 'Get reminded about pending tasks and actions.',
                       icon: Icons.access_time,
-                      value: reminders,
+                      value: _notificationGroups['App']!['Reminders']!,
                       isDarkMode: isDarkMode,
-                      onChanged: (val) => _updateSetting('reminders', val),
+                      themeProvider: themeProvider,
+                      onChanged: (val) => _updateSetting('App', 'Reminders', val),
                     ),
                     _buildAnimatedSwitchTile(
                       title: 'Weekly Reports',
                       description: 'Receive a summary of your activity every week.',
                       icon: Icons.summarize,
-                      value: weeklyReports,
+                      value: _notificationGroups['App']!['Weekly Reports']!,
                       isDarkMode: isDarkMode,
-                      onChanged: (val) => _updateSetting('weekly', val),
+                      themeProvider: themeProvider,
+                      onChanged: (val) => _updateSetting('App', 'Weekly Reports', val),
                     ),
                     
-                    _buildCategoryHeader('Content Notifications', isDarkMode),
+                    _buildCategoryHeader('Content Notifications', isDarkMode, themeProvider),
                     _buildAnimatedSwitchTile(
                       title: 'App Updates',
                       description: 'Be notified when new features are available.',
                       icon: Icons.system_update,
-                      value: appUpdates,
+                      value: _notificationGroups['Content']!['App Updates']!,
                       isDarkMode: isDarkMode,
-                      onChanged: (val) => _updateSetting('updates', val),
+                      themeProvider: themeProvider,
+                      onChanged: (val) => _updateSetting('Content', 'App Updates', val),
                     ),
                     _buildAnimatedSwitchTile(
                       title: 'Transcription Alerts',
                       description: 'Get notified when your transcriptions are ready.',
                       icon: Icons.record_voice_over,
-                      value: transcriptionAlerts,
+                      value: _notificationGroups['Content']!['Transcription Alerts']!,
                       isDarkMode: isDarkMode,
-                      onChanged: (val) => _updateSetting('transcription', val),
+                      themeProvider: themeProvider,
+                      onChanged: (val) => _updateSetting('Content', 'Transcription Alerts', val),
                     ),
                     
                     // Notification time preferences
-                    if (pushNotifications || emailNotifications) ...[
-                      _buildCategoryHeader('Notification Time', isDarkMode),
-                      _buildTimePreferences(isDarkMode),
+                    if (_notificationGroups['General']!['Push Notifications']! || _notificationGroups['General']!['Email Notifications']!) ...[
+                      _buildCategoryHeader('Notification Time', isDarkMode, themeProvider),
+                      _buildTimePreferences(isDarkMode, themeProvider),
                     ],
                     
                     const SizedBox(height: 16),
@@ -309,19 +404,22 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
                         decoration: BoxDecoration(
                           color: Colors.green.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.green.withOpacity(0.3),
+                          ),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(
+                          children: [
+                            const Icon(
                               Icons.check_circle,
                               color: Colors.green,
                               size: 20,
                             ),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Text(
                               'Notification settings saved!',
-                              style: TextStyle(
+                              style: themeProvider.bodyMedium.copyWith(
                                 color: Colors.green,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -338,25 +436,53 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
                     
                     const SizedBox(height: 12),
                     
-                    // Save button
+                    // Action buttons
                     Row(
                       children: [
+                        // Reset button
+                        TextButton.icon(
+                          onPressed: haveUnsavedChanges
+                              ? () => _showResetConfirmation(themeProvider)
+                              : null,
+                          icon: Icon(
+                            Icons.refresh,
+                            size: 18,
+                            color: haveUnsavedChanges
+                                ? isDarkMode ? Colors.white70 : Colors.white
+                                : isDarkMode ? Colors.white30 : Colors.white54,
+                          ),
+                          label: Text(
+                            'Reset',
+                            style: themeProvider.bodyMedium.copyWith(
+                              color: haveUnsavedChanges
+                                  ? isDarkMode ? Colors.white70 : Colors.white
+                                  : isDarkMode ? Colors.white30 : Colors.white54,
+                            ),
+                          ),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                          ),
+                        ),
+                        
+                        const SizedBox(width: 8),
+                        
+                        // Save button
                         Expanded(
-                          child: ElevatedButton(
+                          child: ElevatedButton.icon(
                             onPressed: haveUnsavedChanges ? _savePreferences : null,
+                            icon: const Icon(Icons.save),
+                            label: const Text('Save Preferences'),
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              backgroundColor: Colors.blueAccent,
-                              disabledBackgroundColor: Colors.blueAccent.withOpacity(0.5),
-                            ),
-                            child: Text(
-                              'Save Preferences',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white.withOpacity(haveUnsavedChanges ? 1.0 : 0.7),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(themeProvider.borderRadius),
                               ),
+                              backgroundColor: themeProvider.accentColor,
+                              disabledBackgroundColor: themeProvider.accentColor.withOpacity(0.5),
+                              elevation: 0,
                             ),
                           ),
                         ),
@@ -372,13 +498,12 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
     );
   }
   
-  Widget _buildCategoryHeader(String title, bool isDarkMode) {
+  Widget _buildCategoryHeader(String title, bool isDarkMode, ThemeProvider themeProvider) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8.0, 16.0, 8.0, 8.0),
       child: Text(
         title,
-        style: TextStyle(
-          fontSize: 14,
+        style: themeProvider.titleMedium.copyWith(
           fontWeight: FontWeight.w600,
           color: Colors.white,
           shadows: [
@@ -400,6 +525,7 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
     required IconData icon,
     required bool value,
     required bool isDarkMode,
+    required ThemeProvider themeProvider,
     required ValueChanged<bool> onChanged,
   }) {
     return TweenAnimationBuilder<double>(
@@ -413,7 +539,7 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
             margin: const EdgeInsets.symmetric(vertical: 6.0),
             elevation: isDarkMode ? 0 : 1,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(themeProvider.borderRadius),
             ),
             color: isDarkMode 
                 ? Colors.black.withOpacity(0.3)
@@ -426,8 +552,8 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
                   decoration: BoxDecoration(
                     color: value 
                         ? (isDarkMode 
-                            ? Colors.blueAccent.withOpacity(0.3) 
-                            : Colors.blue.withOpacity(0.1))
+                            ? themeProvider.accentColor.withOpacity(0.3) 
+                            : themeProvider.accentColor.withOpacity(0.1))
                         : (isDarkMode 
                             ? Colors.grey.shade800 
                             : Colors.grey.shade200),
@@ -436,7 +562,7 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
                   child: Icon(
                     icon,
                     color: value 
-                        ? Colors.blueAccent
+                        ? themeProvider.accentColor
                         : isDarkMode 
                             ? Colors.grey.shade400 
                             : Colors.grey.shade600,
@@ -445,26 +571,24 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
                 ),
                 title: Text(
                   title, 
-                  style: TextStyle(
-                    fontSize: 16, 
+                  style: themeProvider.titleMedium.copyWith(
                     fontWeight: FontWeight.w500,
                     color: isDarkMode ? Colors.white : Colors.black87,
                   ),
                 ),
                 subtitle: Text(
                   description, 
-                  style: TextStyle(
-                    fontSize: 13, 
+                  style: themeProvider.bodySmall.copyWith(
                     color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
                   ),
                 ),
                 trailing: Switch(
                   value: value,
                   onChanged: onChanged,
-                  activeColor: Colors.blueAccent,
+                  activeColor: themeProvider.accentColor,
                   activeTrackColor: isDarkMode 
-                      ? Colors.blueAccent.withOpacity(0.3)
-                      : Colors.blue.withOpacity(0.15),
+                      ? themeProvider.accentColor.withOpacity(0.3)
+                      : themeProvider.accentColor.withOpacity(0.15),
                 ),
               ),
             ),
@@ -474,12 +598,12 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
     );
   }
   
-  Widget _buildTimePreferences(bool isDarkMode) {
+  Widget _buildTimePreferences(bool isDarkMode, ThemeProvider themeProvider) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6.0),
       elevation: isDarkMode ? 0 : 1,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(themeProvider.borderRadius),
       ),
       color: isDarkMode 
           ? Colors.black.withOpacity(0.3)
@@ -491,23 +615,42 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.schedule,
-                  color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
-                  size: 24,
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: themeProvider.accentColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.schedule,
+                    color: themeProvider.accentColor,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 16),
-                Text(
-                  'Notification Time Preference',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Notification Time Preference',
+                      style: themeProvider.titleMedium.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: isDarkMode ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      'Choose when you want to receive notifications',
+                      style: themeProvider.bodySmall.copyWith(
+                        color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
             const SizedBox(height: 16),
+            
+            // Time range options with improved layout
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -520,155 +663,419 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
                       haveUnsavedChanges = true;
                     });
                   },
-                  child: Container(
+                  child: AnimatedContainer(
+                    duration: themeProvider.animationDurationShort,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16, 
-                      vertical: 8
+                      vertical: 10
                     ),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? Colors.blueAccent.withOpacity(isDarkMode ? 0.3 : 0.1)
+                          ? themeProvider.accentColor.withOpacity(isDarkMode ? 0.3 : 0.1)
                           : isDarkMode
                               ? Colors.grey.shade800
                               : Colors.grey.shade200,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: isSelected 
-                            ? Colors.blueAccent 
+                            ? themeProvider.accentColor 
                             : Colors.transparent,
-                        width: 1,
+                        width: 1.5,
                       ),
+                      boxShadow: isSelected ? [
+                        BoxShadow(
+                          color: themeProvider.accentColor.withOpacity(0.2),
+                          blurRadius: 4,
+                          spreadRadius: 1,
+                        ),
+                      ] : null,
                     ),
-                    child: Text(
-                      time,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        color: isSelected
-                            ? Colors.blueAccent
-                            : isDarkMode
-                                ? Colors.grey.shade300
-                                : Colors.grey.shade700,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isSelected)
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                color: themeProvider.accentColor,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 6),
+                            ],
+                          ),
+                        Text(
+                          time,
+                          style: themeProvider.bodyMedium.copyWith(
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: isSelected
+                                ? themeProvider.accentColor
+                                : isDarkMode
+                                    ? Colors.grey.shade300
+                                    : Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );
               }).toList(),
             ),
+            
+            // Custom time range selector with improved UI
             if (selectedTimeRange == "Custom") ...[
-              const SizedBox(height: 16),
-              Text(
-                'Select custom time range',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDarkMode 
+                      ? Colors.black.withOpacity(0.2)
+                      : Colors.white.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                  border: Border.all(
+                    color: isDarkMode 
+                        ? Colors.grey.shade800 
+                        : Colors.grey.shade300,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        // Would show time picker here
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Time picker would appear here'),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 12, 
-                          horizontal: 12
-                        ),
-                        decoration: BoxDecoration(
-                          color: isDarkMode
-                              ? Colors.grey.shade800
-                              : Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.access_time,
-                              size: 16,
-                              color: isDarkMode
-                                  ? Colors.grey.shade300
-                                  : Colors.grey.shade700,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '9:00 AM',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: isDarkMode
-                                    ? Colors.grey.shade300
-                                    : Colors.grey.shade700,
-                              ),
-                            ),
-                          ],
-                        ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Custom Time Range',
+                      style: themeProvider.bodyMedium.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Text('to'),
-                  ),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        // Would show time picker here
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Time picker would appear here'),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 12, 
-                          horizontal: 12
-                        ),
-                        decoration: BoxDecoration(
-                          color: isDarkMode
-                              ? Colors.grey.shade800
-                              : Colors.grey.shade200,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.access_time,
-                              size: 16,
-                              color: isDarkMode
-                                  ? Colors.grey.shade300
-                                  : Colors.grey.shade700,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '5:00 PM',
-                              style: TextStyle(
-                                fontSize: 14,
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => _selectTime(context, true),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12, 
+                                horizontal: 12
+                              ),
+                              decoration: BoxDecoration(
                                 color: isDarkMode
-                                    ? Colors.grey.shade300
-                                    : Colors.grey.shade700,
+                                    ? Colors.grey.shade800
+                                    : Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: themeProvider.accentColor.withOpacity(0.3),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.access_time,
+                                    size: 16,
+                                    color: themeProvider.accentColor,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _startTime.format(context),
+                                    style: themeProvider.bodyMedium.copyWith(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
-                      ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            'to',
+                            style: themeProvider.bodyMedium,
+                          ),
+                        ),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () => _selectTime(context, false),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12, 
+                                horizontal: 12
+                              ),
+                              decoration: BoxDecoration(
+                                color: isDarkMode
+                                    ? Colors.grey.shade800
+                                    : Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: themeProvider.accentColor.withOpacity(0.3),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.access_time,
+                                    size: 16,
+                                    color: themeProvider.accentColor,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _endTime.format(context),
+                                    style: themeProvider.bodyMedium.copyWith(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    // Daily schedule options
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _buildDayChip('Mon', true, isDarkMode, themeProvider),
+                        _buildDayChip('Tue', true, isDarkMode, themeProvider),
+                        _buildDayChip('Wed', true, isDarkMode, themeProvider),
+                        _buildDayChip('Thu', true, isDarkMode, themeProvider),
+                        _buildDayChip('Fri', true, isDarkMode, themeProvider),
+                        _buildDayChip('Sat', false, isDarkMode, themeProvider),
+                        _buildDayChip('Sun', false, isDarkMode, themeProvider),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+  
+  // Show help dialog with explanation of notification options
+  void _showHelp(BuildContext context, ThemeProvider themeProvider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              Icons.help_outline,
+              color: themeProvider.accentColor,
+              size: 24,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Notification Help',
+              style: themeProvider.headlineMedium.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHelpItem(
+                'Push Notifications',
+                'Receive alerts on your device when important events happen, such as completed transcriptions.',
+                Icons.notifications_active,
+                themeProvider,
+              ),
+              const SizedBox(height: 16),
+              _buildHelpItem(
+                'Email Notifications',
+                'Get emails about your activity, updates, and important information.',
+                Icons.email,
+                themeProvider,
+              ),
+              const SizedBox(height: 16),
+              _buildHelpItem(
+                'Notification Time',
+                'Control when notifications are sent to avoid disruptions during focused work or sleep hours.',
+                Icons.access_time,
+                themeProvider,
+              ),
+              const SizedBox(height: 16),
+              _buildHelpItem(
+                'Weekly Reports',
+                'Receive a summary of your activity every week, including usage statistics and suggestions.',
+                Icons.summarize,
+                themeProvider,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: themeProvider.textButtonStyle,
+            child: const Text('Got It'),
+          ),
+        ],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildHelpItem(String title, String description, IconData icon, ThemeProvider themeProvider) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: themeProvider.accentColor.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            icon,
+            color: themeProvider.accentColor,
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: themeProvider.titleMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                style: themeProvider.bodyMedium,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  // Show confirmation dialog for resetting settings
+  void _showResetConfirmation(ThemeProvider themeProvider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Reset Settings',
+          style: themeProvider.headlineMedium,
+        ),
+        content: Text(
+          'This will reset all notification settings to their default values. Are you sure you want to continue?',
+          style: themeProvider.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: themeProvider.textButtonStyle,
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _resetSettings();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Reset'),
+          ),
+        ],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+        ),
+      ),
+    );
+  }
+  
+  // Reset notification settings to defaults
+  void _resetSettings() {
+    setState(() {
+      // Reset to default values
+      _notificationGroups = {
+        'General': {
+          'Push Notifications': true,
+          'Email Notifications': false,
+        },
+        'App': {
+          'Reminders': true,
+          'Weekly Reports': false,
+        },
+        'Content': {
+          'App Updates': true,
+          'Transcription Alerts': true,
+        }
+      };
+      
+      selectedTimeRange = "Anytime";
+      _startTime = const TimeOfDay(hour: 9, minute: 0);
+      _endTime = const TimeOfDay(hour: 17, minute: 0);
+      
+      // Mark as having unsaved changes
+      haveUnsavedChanges = true;
+    });
+    
+    // Show feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Settings reset to defaults'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+  
+  Widget _buildDayChip(String day, bool isActive, bool isDarkMode, ThemeProvider themeProvider) {
+    return GestureDetector(
+      onTap: () {
+        // Would toggle day selection in a real app
+        setState(() {
+          haveUnsavedChanges = true;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive
+              ? themeProvider.accentColor.withOpacity(isDarkMode ? 0.3 : 0.1)
+              : isDarkMode
+                  ? Colors.grey.shade800.withOpacity(0.5)
+                  : Colors.grey.shade200.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isActive
+                ? themeProvider.accentColor
+                : Colors.transparent,
+          ),
+        ),
+        child: Text(
+          day,
+          style: themeProvider.bodySmall.copyWith(
+            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            color: isActive
+                ? themeProvider.accentColor
+                : isDarkMode
+                    ? Colors.grey.shade400
+                    : Colors.grey.shade600,
+          ),
         ),
       ),
     );

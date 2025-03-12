@@ -43,6 +43,9 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  
+  // Track hover states for interactive UI elements
+  final Map<String, bool> _hoverStates = {};
 
   @override
   void initState() {
@@ -91,20 +94,33 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
       return true;
     }
     
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    
     final shouldPop = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Unsaved Changes'),
-        content: const Text(
-          'You have unsaved AI preference changes. Do you want to discard these changes?'
+        title: Text(
+          'Unsaved Changes',
+          style: themeProvider.headlineMedium,
+        ),
+        content: Text(
+          'You have unsaved AI preference changes. Do you want to discard these changes?',
+          style: themeProvider.bodyMedium,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
+            style: themeProvider.textButtonStyle,
             child: const Text('CANCEL'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: themeProvider.errorColor,
+            ),
             child: const Text('DISCARD'),
           ),
         ],
@@ -196,10 +212,16 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
       });
       
       if (mounted) {
+        final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error saving preferences: $e'),
-            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: themeProvider.errorColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+            ),
           ),
         );
       }
@@ -207,18 +229,28 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
   }
   
   void _showDeveloperWarning() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Developer Preview Features'),
-        content: const Text(
+        title: Text(
+          'Developer Preview Features',
+          style: themeProvider.headlineMedium,
+        ),
+        content: Text(
           'Developer preview features are experimental and may not work as expected. '
           'These features are provided for testing purposes only and should not be '
-          'relied upon for critical tasks.'
+          'relied upon for critical tasks.',
+          style: themeProvider.bodyMedium,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
         ),
         actions: [
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context),
+            style: themeProvider.primaryButtonStyle,
             child: const Text('OK'),
           ),
         ],
@@ -227,18 +259,28 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
   }
   
   void _showExperimentalWarning() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Experimental AI Model'),
-        content: const Text(
+        title: Text(
+          'Experimental AI Model',
+          style: themeProvider.headlineMedium,
+        ),
+        content: Text(
           'The experimental AI model offers cutting-edge capabilities but may be less '
           'stable and consume more resources. It is recommended only for testing '
-          'advanced features.'
+          'advanced features.',
+          style: themeProvider.bodyMedium,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
         ),
         actions: [
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context),
+            style: themeProvider.primaryButtonStyle,
             child: const Text('OK'),
           ),
         ],
@@ -308,9 +350,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
         appBar: AppBar(
           title: Text(
             'AI Preferences',
-            style: TextStyle(
-              fontWeight: FontWeight.bold, 
-              fontSize: 22,
+            style: themeProvider.headlineLarge.copyWith(
               color: Colors.white,
               shadows: [
                 Shadow(
@@ -328,6 +368,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
                 Navigator.pop(context);
               }
             },
+            tooltip: 'Back',
           ),
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -354,7 +395,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
                   child: ListView(
                     padding: const EdgeInsets.all(16.0),
                     children: [
-                      _buildSectionHeader('Core AI Behavior', Icons.settings),
+                      _buildSectionHeader('Core AI Behavior', Icons.settings, themeProvider),
                       _buildSwitchTile(
                         title: 'Adaptive Responses',
                         subtitle: 'Allow AI to adapt its responses based on your interaction style',
@@ -362,15 +403,70 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
                         icon: Icons.auto_awesome,
                         onChanged: (val) => _updateSetting('adaptive', val),
                         isDarkMode: isDarkMode,
+                        themeProvider: themeProvider,
                       ),
-                      _buildAIModelSelector(isDarkMode),
-                      _buildLanguageSelector(isDarkMode),
+                      _buildSwitchTile(
+                        title: 'Context Memory',
+                        subtitle: 'AI remembers previous conversations for improved relevance',
+                        value: contextMemory,
+                        icon: Icons.psychology,
+                        onChanged: (val) => _updateSetting('memory', val),
+                        isDarkMode: isDarkMode,
+                        themeProvider: themeProvider,
+                      ),
+                      _buildProcessingSpeedCard(isDarkMode, themeProvider),
+                      _buildAIModelSelector(isDarkMode, themeProvider),
+                      
+                      const SizedBox(height: 16),
+                      _buildSectionHeader('Voice & Language', Icons.record_voice_over, themeProvider),
+                      _buildSwitchTile(
+                        title: 'Voice Feedback',
+                        subtitle: 'Enable spoken responses from the AI assistant',
+                        value: voiceFeedback,
+                        icon: Icons.mic,
+                        onChanged: (val) => _updateSetting('voice', val),
+                        isDarkMode: isDarkMode,
+                        themeProvider: themeProvider,
+                      ),
+                      if (voiceFeedback)
+                        _buildVoiceSettingsCard(isDarkMode, themeProvider),
+                      _buildSwitchTile(
+                        title: 'Auto-Transcribe',
+                        subtitle: 'Automatically transcribe your voice recordings',
+                        value: autoTranscribe,
+                        icon: Icons.text_fields,
+                        onChanged: (val) => _updateSetting('transcribe', val),
+                        isDarkMode: isDarkMode,
+                        themeProvider: themeProvider,
+                      ),
+                      _buildLanguageSelector(isDarkMode, themeProvider),
                       if (selectedLanguage == 'English') 
-                        _buildDialectSelector(isDarkMode),
+                        _buildDialectSelector(isDarkMode, themeProvider),
+                        
+                      const SizedBox(height: 16),
+                      _buildSectionHeader('Security & Advanced', Icons.shield, themeProvider),
+                      _buildSwitchTile(
+                        title: 'Enhanced Privacy',
+                        subtitle: 'Limit data storage and disable conversation learning',
+                        value: enhancedPrivacy,
+                        icon: Icons.security,
+                        onChanged: (val) => _updateSetting('privacy', val),
+                        isDarkMode: isDarkMode,
+                        themeProvider: themeProvider,
+                      ),
+                      _buildSwitchTile(
+                        title: 'Developer Preview',
+                        subtitle: 'Enable experimental features for testing',
+                        value: developerPreview,
+                        icon: Icons.code,
+                        onChanged: (val) => _updateSetting('developer', val),
+                        isDarkMode: isDarkMode,
+                        themeProvider: themeProvider,
+                      ),
                     ],
                   ),
                 ),
-                _buildBottomBar(isDarkMode),
+                _buildBottomBar(isDarkMode, themeProvider),
               ],
             ),
           ),
@@ -379,7 +475,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
     );
   }
   
-  Widget _buildBottomBar(bool isDarkMode) {
+  Widget _buildBottomBar(bool isDarkMode, ThemeProvider themeProvider) {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
@@ -473,7 +569,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon) {
+  Widget _buildSectionHeader(String title, IconData icon, ThemeProvider themeProvider) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8.0, 16.0, 8.0, 8.0),
       child: Row(
@@ -486,8 +582,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
           const SizedBox(width: 8),
           Text(
             title,
-            style: TextStyle(
-              fontSize: 14,
+            style: themeProvider.bodyLarge.copyWith(
               fontWeight: FontWeight.w600,
               color: Colors.white,
               shadows: [
@@ -512,6 +607,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
     required IconData icon,
     required ValueChanged<bool> onChanged,
     required bool isDarkMode,
+    required ThemeProvider themeProvider,
   }) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6.0),
@@ -539,16 +635,14 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
           ),
           title: Text(
             title,
-            style: const TextStyle(
-              fontSize: 16,
+            style: themeProvider.bodyLarge.copyWith(
               fontWeight: FontWeight.w500,
               color: Colors.white,
             ),
           ),
           subtitle: Text(
             subtitle,
-            style: TextStyle(
-              fontSize: 13,
+            style: themeProvider.bodyMedium.copyWith(
               color: Colors.white.withOpacity(0.7),
             ),
           ),
@@ -563,7 +657,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
     );
   }
   
-  Widget _buildProcessingSpeedCard(bool isDarkMode) {
+  Widget _buildProcessingSpeedCard(bool isDarkMode, ThemeProvider themeProvider) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -604,8 +698,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
                       ),
                       Text(
                         'Adjust how quickly the AI processes and responds',
-                        style: TextStyle(
-                          fontSize: 13,
+                        style: themeProvider.bodyMedium.copyWith(
                           color: Colors.white.withOpacity(0.7),
                         ),
                       ),
@@ -633,8 +726,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
                     const SizedBox(width: 4),
                     Text(
                       'Thorough',
-                      style: TextStyle(
-                        fontSize: 12,
+                      style: themeProvider.bodyMedium.copyWith(
                         color: Colors.white.withOpacity(0.7),
                       ),
                     ),
@@ -646,8 +738,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
                     const SizedBox(width: 4),
                     Text(
                       'Speedy',
-                      style: TextStyle(
-                        fontSize: 12,
+                      style: themeProvider.bodyMedium.copyWith(
                         color: Colors.white.withOpacity(0.7),
                       ),
                     ),
@@ -661,7 +752,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
     );
   }
   
-  Widget _buildVoiceSettingsCard(bool isDarkMode) {
+  Widget _buildVoiceSettingsCard(bool isDarkMode, ThemeProvider themeProvider) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -775,7 +866,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
     );
   }
   
-  Widget _buildLanguageSelector(bool isDarkMode) {
+  Widget _buildLanguageSelector(bool isDarkMode, ThemeProvider themeProvider) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -857,7 +948,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
     );
   }
   
-  Widget _buildDialectSelector(bool isDarkMode) {
+  Widget _buildDialectSelector(bool isDarkMode, ThemeProvider themeProvider) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -898,8 +989,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
                       ),
                       Text(
                         'Choose your preferred English dialect',
-                        style: TextStyle(
-                          fontSize: 13,
+                        style: themeProvider.bodyMedium.copyWith(
                           color: Colors.white.withOpacity(0.7),
                         ),
                       ),
@@ -916,42 +1006,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
             ),
             if (useDialect) ...[
               const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.2),
-                    width: 1,
-                  ),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: selectedDialect,
-                    isExpanded: true,
-                    dropdownColor: isDarkMode 
-                        ? Colors.grey.shade900 
-                        : Colors.grey.shade800,
-                    icon: const Icon(Icons.arrow_drop_down, color: Colors.white70),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
-                    onChanged: (String? newValue) {
-                      if (newValue != null) {
-                        _updateSetting('dialectType', newValue);
-                      }
-                    },
-                    items: _englishDialects.map<DropdownMenuItem<String>>((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
+              _buildDialectOptions(isDarkMode, themeProvider),
             ],
           ],
         ),
@@ -959,7 +1014,85 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
     );
   }
 
-  Widget _buildAIModelSelector(bool isDarkMode) {
+  Widget _buildDialectOptions(bool isDarkMode, ThemeProvider themeProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Select Dialect',
+          style: themeProvider.bodyMedium.copyWith(
+            color: themeProvider.secondaryTextColor,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: _englishDialects.map((dialect) {
+            final isSelected = selectedDialect == dialect;
+            final hoverKey = 'dialect_$dialect';
+            final isHovering = _hoverStates[hoverKey] ?? false;
+            
+            return MouseRegion(
+              onEnter: (_) => setState(() => _hoverStates[hoverKey] = true),
+              onExit: (_) => setState(() => _hoverStates[hoverKey] = false),
+              child: GestureDetector(
+                onTap: () => _updateSetting('dialectType', dialect),
+                child: AnimatedContainer(
+                  duration: themeProvider.animationDurationShort,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? themeProvider.accentColor.withOpacity(0.2)
+                        : isHovering
+                            ? themeProvider.secondaryTextColor.withOpacity(0.1)
+                            : themeProvider.secondaryTextColor.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                    border: Border.all(
+                      color: isSelected
+                          ? themeProvider.accentColor
+                          : isHovering
+                              ? themeProvider.accentColor.withOpacity(0.3)
+                              : Colors.transparent,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.language,
+                        size: 16,
+                        color: isSelected
+                            ? themeProvider.accentColor
+                            : themeProvider.secondaryIconColor,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        dialect,
+                        style: themeProvider.bodyMedium.copyWith(
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected
+                              ? themeProvider.accentColor
+                              : themeProvider.primaryTextColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAIModelSelector(bool isDarkMode, ThemeProvider themeProvider) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1000,8 +1133,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
                       ),
                       Text(
                         'Choose which AI model to use',
-                        style: TextStyle(
-                          fontSize: 13,
+                        style: themeProvider.bodyMedium.copyWith(
                           color: Colors.white.withOpacity(0.7),
                         ),
                       ),
@@ -1048,8 +1180,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
                         Text(
                           model,
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 12,
+                          style: themeProvider.bodyMedium.copyWith(
                             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                             color: isSelected ? Colors.blueAccent : Colors.white70,
                           ),
@@ -1091,8 +1222,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
                         selectedAIModel == 'Experimental'
                             ? 'Experimental model may have unexpected behavior'
                             : 'Advanced model uses more resources but gives better results',
-                        style: TextStyle(
-                          fontSize: 12,
+                        style: themeProvider.bodyMedium.copyWith(
                           color: selectedAIModel == 'Experimental'
                               ? Colors.orange
                               : Colors.blue,
@@ -1110,10 +1240,15 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
   }
   
   void _showHelpDialog() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('About AI Preferences'),
+        title: Text(
+          'About AI Preferences',
+          style: themeProvider.headlineMedium,
+        ),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1123,37 +1258,46 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
                 'Adaptive Responses',
                 'When enabled, the AI will learn from your interactions and adjust its responses to better match your communication style.',
                 Icons.auto_awesome,
+                themeProvider,
               ),
               const SizedBox(height: 16),
               _buildHelpItem(
                 'Voice Features',
                 'Control text-to-speech functionality and voice characteristics for audio responses.',
                 Icons.record_voice_over,
+                themeProvider,
               ),
               const SizedBox(height: 16),
               _buildHelpItem(
                 'Processing Speed',
                 'Adjust the tradeoff between response quality and speed. Slower processing typically yields more thorough responses.',
                 Icons.speed,
+                themeProvider,
               ),
               const SizedBox(height: 16),
               _buildHelpItem(
                 'AI Models',
                 'Select different AI models based on your needs. Advanced models provide better quality at the cost of speed and resources.',
                 Icons.memory,
+                themeProvider,
               ),
               const SizedBox(height: 16),
               _buildHelpItem(
                 'Privacy Mode',
                 'Enhanced privacy mode prevents your conversations from being used for AI training and limits data storage.',
                 Icons.security,
+                themeProvider,
               ),
             ],
           ),
         ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+        ),
         actions: [
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context),
+            style: themeProvider.primaryButtonStyle,
             child: const Text('CLOSE'),
           ),
         ],
@@ -1161,19 +1305,22 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
     );
   }
   
-  Widget _buildHelpItem(String title, String description, IconData icon) {
+  Widget _buildHelpItem(String title, String description, IconData icon, ThemeProvider themeProvider) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(icon, size: 20, color: Colors.blueAccent),
+            Icon(
+              icon,
+              size: 20,
+              color: themeProvider.accentColor,
+            ),
             const SizedBox(width: 8),
             Text(
               title,
-              style: const TextStyle(
+              style: themeProvider.titleMedium.copyWith(
                 fontWeight: FontWeight.bold,
-                fontSize: 16,
               ),
             ),
           ],
@@ -1181,7 +1328,10 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
         const SizedBox(height: 4),
         Padding(
           padding: const EdgeInsets.only(left: 28.0),
-          child: Text(description),
+          child: Text(
+            description,
+            style: themeProvider.bodyMedium,
+          ),
         ),
       ],
     );

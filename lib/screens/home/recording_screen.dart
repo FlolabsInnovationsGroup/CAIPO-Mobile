@@ -48,6 +48,14 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
   
   late TabController _tabController;
   Timer? _timer;
+  
+  // Animation controllers for enhanced UX
+  late AnimationController _animationController;
+  late Animation<double> _pulseAnimation;
+  
+  bool _isHoveringRecord = false;
+  bool _isHoveringPlay = false;
+  bool _isHoveringPause = false;
 
   @override
   void initState() {
@@ -60,6 +68,19 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
         setState(() => _recordingType = RecordingType.video);
       }
     });
+    
+    // Initialize animations
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOut,
+      ),
+    );
     
     _initRecorders();
     _loadRecentRecordings();
@@ -85,6 +106,8 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
 
   Future<void> _checkPermissions() async {
     final status = await Permission.microphone.request();
+    final cameraStatus = await Permission.camera.request();
+    
     setState(() {
       _hasPermission = status == PermissionStatus.granted;
     });
@@ -95,24 +118,35 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
   }
 
   void _showPermissionDeniedDialog() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Microphone Permission Required'),
-          content: const Text(
-            'This app needs microphone access to record audio. Please grant permission in settings.'
+          title: Text(
+            'Microphone Permission Required',
+            style: themeProvider.headlineMedium,
+          ),
+          content: Text(
+            'This app needs microphone access to record audio. Please grant permission in settings.',
+            style: themeProvider.bodyMedium,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(themeProvider.borderRadius),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
+              style: themeProvider.textButtonStyle,
               child: const Text('Cancel'),
             ),
-            TextButton(
+            ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
                 openAppSettings();
               },
+              style: themeProvider.primaryButtonStyle,
               child: const Text('Open Settings'),
             ),
           ],
@@ -122,10 +156,12 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
   }
 
   void _showHelpDialog() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Recording Help'),
+        title: Text('Recording Help', style: themeProvider.headlineMedium),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -135,31 +171,39 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
                 'Audio Recording',
                 'Tap the Record button to start recording audio. You can pause and resume at any time.',
                 Icons.mic,
+                themeProvider,
               ),
               const SizedBox(height: 16),
               _buildHelpItem(
                 'Video Recording',
                 'Switch to the Video tab and tap the camera button to record a video.',
                 Icons.videocam,
+                themeProvider,
               ),
               const SizedBox(height: 16),
               _buildHelpItem(
                 'Playback',
                 'Tap on any recording to play it back. Use the play button on audio recordings.',
                 Icons.play_arrow,
+                themeProvider,
               ),
               const SizedBox(height: 16),
               _buildHelpItem(
                 'Transcription',
                 'For audio recordings, use the menu to transcribe speech to text.',
                 Icons.text_fields,
+                themeProvider,
               ),
             ],
           ),
         ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+        ),
         actions: [
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context),
+            style: themeProvider.primaryButtonStyle,
             child: const Text('GOT IT'),
           ),
         ],
@@ -167,19 +211,18 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
     );
   }
 
-  Widget _buildHelpItem(String title, String description, IconData icon) {
+  Widget _buildHelpItem(String title, String description, IconData icon, ThemeProvider themeProvider) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(icon, size: 20, color: Colors.blueAccent),
+            Icon(icon, size: 20, color: themeProvider.accentColor),
             const SizedBox(width: 8),
             Text(
               title,
-              style: const TextStyle(
+              style: themeProvider.titleMedium.copyWith(
                 fontWeight: FontWeight.bold,
-                fontSize: 16,
               ),
             ),
           ],
@@ -187,7 +230,10 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
         const SizedBox(height: 4),
         Padding(
           padding: const EdgeInsets.only(left: 28.0),
-          child: Text(description),
+          child: Text(
+            description,
+            style: themeProvider.bodyMedium,
+          ),
         ),
       ],
     );
@@ -200,9 +246,18 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
 
     return GradientScaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           "Voice & Video Recorder",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.white),
+          style: themeProvider.headlineLarge.copyWith(
+            color: Colors.white,
+            shadows: [
+              Shadow(
+                color: Colors.black.withOpacity(0.3),
+                offset: const Offset(0, 2),
+                blurRadius: 4,
+              ),
+            ],
+          ),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -214,11 +269,16 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
           IconButton(
             icon: const Icon(Icons.help_outline, color: Colors.white),
             onPressed: _showHelpDialog,
+            tooltip: 'Recording Help',
           ),
         ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
+          labelStyle: themeProvider.titleMedium.copyWith(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
           tabs: const [
             Tab(text: "AUDIO"),
             Tab(text: "VIDEO"),
@@ -228,14 +288,14 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildAudioRecordingTab(isDarkMode),
-          _buildVideoRecordingTab(isDarkMode),
+          _buildAudioRecordingTab(isDarkMode, themeProvider),
+          _buildVideoRecordingTab(isDarkMode, themeProvider),
         ],
       ),
     );
   }
 
-  Widget _buildAudioRecordingTab(bool isDarkMode) {
+  Widget _buildAudioRecordingTab(bool isDarkMode, ThemeProvider themeProvider) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Column(
@@ -243,7 +303,7 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
           const SizedBox(height: 20),
           
           // Audio visualizer
-          _buildAudioVisualizer(isDarkMode),
+          _buildAudioVisualizer(isDarkMode, themeProvider),
           
           const SizedBox(height: 16),
           
@@ -251,51 +311,58 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
           if (_isRecording)
             Text(
               _formatDuration(_recordingDuration),
-              style: TextStyle(
-                fontSize: 42,
+              style: themeProvider.displayLarge.copyWith(
                 fontWeight: FontWeight.bold,
-                color: isDarkMode ? Colors.white : Colors.black87,
+                color: _isPaused ? themeProvider.secondaryTextColor : themeProvider.primaryTextColor,
               ),
             ),
             
           const SizedBox(height: 24),
           
           // Recording controls
-          _buildRecordingControls(isDarkMode),
+          _buildRecordingControls(isDarkMode, themeProvider),
           
           const SizedBox(height: 40),
           
           // Recent recordings
           Expanded(
-            child: _buildRecentRecordings(isDarkMode),
+            child: _buildRecentRecordings(isDarkMode, themeProvider),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildVideoRecordingTab(bool isDarkMode) {
+  Widget _buildVideoRecordingTab(bool isDarkMode, ThemeProvider themeProvider) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Column(
         children: [
           const SizedBox(height: 20),
           
-          // Video preview or placeholder
+          // Video preview with enhanced styling
           Container(
             height: 220,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(12),
+              color: isDarkMode ? Colors.black26 : Colors.white.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(themeProvider.borderRadius),
               border: Border.all(
                 color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
                 width: 1,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: _videoFile != null
                 ? ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(themeProvider.borderRadius),
                     child: Image.asset(
                       'assets/video_thumbnail.png',
                       fit: BoxFit.cover,
@@ -312,7 +379,7 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
                       const SizedBox(height: 16),
                       Text(
                         'Tap the button below to start recording',
-                        style: TextStyle(
+                        style: themeProvider.bodyLarge.copyWith(
                           color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                         ),
                       ),
@@ -322,45 +389,65 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
           
           const SizedBox(height: 32),
           
-          // Video recording button
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.redAccent,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.redAccent.withOpacity(0.3),
-                  blurRadius: 8,
-                  spreadRadius: 2,
+          // Video recording button with enhanced styling and animations
+          ScaleTransition(
+            scale: _pulseAnimation,
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: themeProvider.errorColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: themeProvider.errorColor.withOpacity(0.3),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                  ),
+                ],
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.redAccent,
+                    Colors.red.shade900,
+                  ],
                 ),
-              ],
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.videocam, color: Colors.white, size: 36),
-              onPressed: _pickVideo,
+              ),
+              child: Material(
+                color: Colors.transparent,
+                shape: const CircleBorder(),
+                child: InkWell(
+                  onTap: _pickVideo,
+                  customBorder: const CircleBorder(),
+                  child: const Icon(
+                    Icons.videocam,
+                    color: Colors.white,
+                    size: 40,
+                  ),
+                ),
+              ),
             ),
           ),
           
           const SizedBox(height: 40),
           
-          // Recent video recordings
+          // Recent video recordings with theme styling
           Expanded(
-            child: _buildRecentRecordings(isDarkMode, audioOnly: false),
+            child: _buildRecentRecordings(isDarkMode, themeProvider, audioOnly: false),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAudioVisualizer(bool isDarkMode) {
+  Widget _buildAudioVisualizer(bool isDarkMode, ThemeProvider themeProvider) {
     return Container(
       height: 180,
       width: double.infinity,
       decoration: BoxDecoration(
         color: isDarkMode ? Colors.black26 : Colors.white.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(themeProvider.borderRadius),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -375,7 +462,9 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
               size: Size(MediaQuery.of(context).size.width - 40, 180),
               recorderController: _recorderController!,
               waveStyle: WaveStyle(
-                waveColor: _isPaused ? Colors.grey : Colors.blueAccent,
+                waveColor: _isPaused 
+                    ? Colors.grey 
+                    : themeProvider.accentColor,
                 extendWaveform: true,
                 showMiddleLine: false,
                 spacing: 8.0,
@@ -384,7 +473,7 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
               padding: const EdgeInsets.symmetric(horizontal: 16),
               margin: const EdgeInsets.symmetric(horizontal: 8),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(themeProvider.borderRadius),
               ),
             )
           : Center(
@@ -394,8 +483,8 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
                       playerController: _playerController!,
                       enableSeekGesture: true,
                       playerWaveStyle: PlayerWaveStyle(
-                        fixedWaveColor: Colors.blueAccent,
-                        liveWaveColor: Colors.blueAccent.shade700,
+                        fixedWaveColor: themeProvider.accentColor.withOpacity(0.5),
+                        liveWaveColor: themeProvider.accentColor,
                         showBottom: false,
                         spacing: 8.0,
                         waveCap: StrokeCap.round,
@@ -417,7 +506,7 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
                           _audioFilePath != null 
                               ? 'Ready to play recording' 
                               : 'Tap the microphone button to start',
-                          style: TextStyle(
+                          style: themeProvider.bodyLarge.copyWith(
                             color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                           ),
                         ),
@@ -427,7 +516,7 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
     );
   }
 
-  Widget _buildRecordingControls(bool isDarkMode) {
+  Widget _buildRecordingControls(bool isDarkMode, ThemeProvider themeProvider) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
       decoration: BoxDecoration(
@@ -482,6 +571,7 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
                   icon: _isPlaying ? Icons.stop : Icons.play_arrow,
                   label: _isPlaying ? 'Stop' : 'Play',
                   color: Colors.green,
+                  themeProvider: themeProvider,
                 ),
                 
               if (!_isPlaying)
@@ -491,6 +581,7 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
                   label: _isRecording ? 'Stop' : 'Record',
                   color: _isRecording ? Colors.red : Colors.blueAccent,
                   isLoading: _isProcessing,
+                  themeProvider: themeProvider,
                 ),
                 
               if (_isRecording)
@@ -499,6 +590,7 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
                   icon: _isPaused ? Icons.play_arrow : Icons.pause,
                   label: _isPaused ? 'Resume' : 'Pause',
                   color: Colors.orange,
+                  themeProvider: themeProvider,
                 ),
             ],
           ),
@@ -513,46 +605,70 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
     required String label,
     required Color color,
     bool isLoading = false,
+    bool isHovering = false,
+    Function(bool)? onHover,
+    required ThemeProvider themeProvider,
   }) {
-    return Column(
-      children: [
-        Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color,
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.3),
-                blurRadius: 8,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: isLoading
-              ? const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  strokeWidth: 3,
-                )
-              : IconButton(
-                  icon: Icon(icon, color: Colors.white, size: 32),
-                  onPressed: onPressed,
+    return MouseRegion(
+      onEnter: (_) => onHover?.call(true),
+      onExit: (_) => onHover?.call(false),
+      child: Column(
+        children: [
+          AnimatedContainer(
+            duration: themeProvider.animationDurationShort,
+            width: isHovering ? 68 : 64,
+            height: isHovering ? 68 : 64,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color,
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(isHovering ? 0.4 : 0.3),
+                  blurRadius: isHovering ? 12 : 8,
+                  spreadRadius: isHovering ? 3 : 2,
                 ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
+              ],
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  color,
+                  Color.lerp(color, Colors.black, 0.3) ?? color,
+                ],
+              ),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              shape: const CircleBorder(),
+              child: InkWell(
+                onTap: onPressed,
+                customBorder: const CircleBorder(),
+                child: isLoading
+                    ? const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        strokeWidth: 3,
+                      )
+                    : Icon(
+                        icon,
+                        color: Colors.white,
+                        size: isHovering ? 36 : 32,
+                      ),
+              ),
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: themeProvider.titleMedium.copyWith(
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildRecentRecordings(bool isDarkMode, {bool audioOnly = true}) {
+  Widget _buildRecentRecordings(bool isDarkMode, ThemeProvider themeProvider, {bool audioOnly = true}) {
     final filteredRecordings = audioOnly
         ? _recentRecordings.where((rec) => rec.isAudio).toList()
         : _recentRecordings.where((rec) => !rec.isAudio).toList();
@@ -587,7 +703,7 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
             itemCount: filteredRecordings.length,
             itemBuilder: (context, index) {
               final recording = filteredRecordings[index];
-              return _buildRecordingItem(recording, isDarkMode);
+              return _buildRecordingItem(recording, isDarkMode, themeProvider);
             },
           ),
         ),
@@ -609,6 +725,7 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
     _recorderController?.dispose();
     _playerController?.dispose();
     _tabController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -763,25 +880,50 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
     }
   }
 
-  Widget _buildRecordingItem(RecordingFile recording, bool isDarkMode) {
+  Widget _buildRecordingItem(RecordingFile recording, bool isDarkMode, ThemeProvider themeProvider) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+      ),
+      elevation: 2,
+      color: isDarkMode ? Colors.grey.shade900.withOpacity(0.7) : Colors.white,
       child: ListTile(
-        leading: Icon(
-          recording.isAudio ? Icons.mic : Icons.videocam,
-          color: recording.isAudio ? Colors.blueAccent : Colors.redAccent,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: recording.isAudio 
+                ? themeProvider.accentColor.withOpacity(0.2) 
+                : Colors.redAccent.withOpacity(0.2),
+          ),
+          child: Icon(
+            recording.isAudio ? Icons.mic : Icons.videocam,
+            color: recording.isAudio ? themeProvider.accentColor : Colors.redAccent,
+          ),
         ),
         title: Text(
           recording.displayName,
-          style: TextStyle(
-            color: isDarkMode ? Colors.white : Colors.black87,
-          ),
+          style: themeProvider.titleMedium,
         ),
-        subtitle: Text(
-          DateFormat('MMM d, y HH:mm').format(recording.date),
-          style: TextStyle(
-            color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-          ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text(
+              DateFormat('MMM d, y HH:mm').format(recording.date),
+              style: themeProvider.bodySmall,
+            ),
+            if (_isPlaying && _audioFilePath == recording.file.path && recording.isAudio)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: LinearProgressIndicator(
+                  backgroundColor: themeProvider.accentColor.withOpacity(0.2),
+                  valueColor: AlwaysStoppedAnimation<Color>(themeProvider.accentColor),
+                ),
+              ),
+          ],
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -792,23 +934,16 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
                   _isPlaying && _audioFilePath == recording.file.path
                       ? Icons.stop
                       : Icons.play_arrow,
-                  color: isDarkMode ? Colors.white70 : Colors.black54,
+                  color: themeProvider.secondaryIconColor,
                 ),
                 onPressed: () => _playAudio(recording.file.path),
               ),
             IconButton(
               icon: Icon(
-                Icons.delete,
-                color: isDarkMode ? Colors.white70 : Colors.black54,
+                Icons.more_vert,
+                color: themeProvider.secondaryIconColor,
               ),
-              onPressed: () async {
-                try {
-                  await recording.file.delete();
-                  await _loadRecentRecordings();
-                } catch (e) {
-                  print('Error deleting recording: $e');
-                }
-              },
+              onPressed: () => _showRecordingOptions(recording, themeProvider),
             ),
           ],
         ),
@@ -822,6 +957,229 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
                     ),
                   ),
                 ),
+      ),
+    );
+  }
+  
+  void _showRecordingOptions(RecordingFile recording, ThemeProvider themeProvider) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: themeProvider.modalBackgroundColor,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(themeProvider.borderRadius),
+        ),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(
+                Icons.play_circle_fill,
+                color: themeProvider.accentColor,
+              ),
+              title: Text(
+                'Play',
+                style: themeProvider.bodyLarge,
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                if (recording.isAudio) {
+                  _playAudio(recording.file.path);
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => VideoPlaybackScreen(
+                        videoFile: recording.file,
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
+            if (recording.isAudio)
+              ListTile(
+                leading: Icon(
+                  Icons.text_fields,
+                  color: themeProvider.accentColor,
+                ),
+                title: Text(
+                  'Transcribe',
+                  style: themeProvider.bodyLarge,
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(
+                    context,
+                    '/transcription',
+                    arguments: recording.file.path,
+                  );
+                },
+              ),
+            ListTile(
+              leading: Icon(
+                Icons.share,
+                color: themeProvider.accentColor,
+              ),
+              title: Text(
+                'Share',
+                style: themeProvider.bodyLarge,
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Sharing coming soon'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.edit,
+                color: themeProvider.accentColor,
+              ),
+              title: Text(
+                'Rename',
+                style: themeProvider.bodyLarge,
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _showRenameDialog(recording, themeProvider);
+              },
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.delete_outline,
+                color: themeProvider.errorColor,
+              ),
+              title: Text(
+                'Delete',
+                style: themeProvider.bodyLarge.copyWith(
+                  color: themeProvider.errorColor,
+                ),
+              ),
+              onTap: () async {
+                Navigator.pop(context);
+                _confirmDelete(recording, themeProvider);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  void _showRenameDialog(RecordingFile recording, ThemeProvider themeProvider) {
+    final TextEditingController nameController = TextEditingController();
+    nameController.text = recording.name.split('.').first;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Rename Recording', style: themeProvider.headlineMedium),
+        content: TextField(
+          controller: nameController,
+          decoration: InputDecoration(
+            labelText: 'New Name',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+            ),
+          ),
+          autofocus: true,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: themeProvider.textButtonStyle,
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              // Implement rename functionality
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Rename feature coming soon')),
+              );
+            },
+            style: themeProvider.primaryButtonStyle,
+            child: const Text('Rename'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _confirmDelete(RecordingFile recording, ThemeProvider themeProvider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete Recording', style: themeProvider.headlineMedium),
+        content: Text(
+          'Are you sure you want to delete "${recording.displayName}"? This cannot be undone.',
+          style: themeProvider.bodyMedium,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: themeProvider.textButtonStyle,
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                Navigator.pop(context);
+                await recording.file.delete();
+                
+                // If the file we're deleting is the current audio file
+                if (_audioFilePath == recording.file.path) {
+                  if (_isPlaying) {
+                    await _audioPlayer.stopPlayer();
+                    await _playerController?.stopAllPlayers();
+                  }
+                  setState(() {
+                    _audioFilePath = null;
+                    _isPlaying = false;
+                  });
+                }
+                
+                await _loadRecentRecordings();
+                
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Recording deleted'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              } catch (e) {
+                print('Error deleting recording: $e');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error deleting recording: $e'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: themeProvider.errorColor,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }
@@ -864,6 +1222,9 @@ class VideoPlaybackScreen extends StatefulWidget {
 class _VideoPlaybackScreenState extends State<VideoPlaybackScreen> {
   VideoPlayerController? _controller;
   bool _isInitialized = false;
+  bool _isPlaying = false;
+  double _currentPosition = 0;
+  double _totalDuration = 0;
   
   @override
   void initState() {
@@ -875,11 +1236,33 @@ class _VideoPlaybackScreenState extends State<VideoPlaybackScreen> {
     try {
       _controller = VideoPlayerController.file(widget.videoFile);
       await _controller!.initialize();
-      setState(() => _isInitialized = true);
+      
+      setState(() {
+        _isInitialized = true;
+        _totalDuration = _controller!.value.duration.inMilliseconds.toDouble();
+      });
+      
+      // Add listener for position updates
+      _controller!.addListener(() {
+        if (mounted) {
+          setState(() {
+            _isPlaying = _controller!.value.isPlaying;
+            _currentPosition = _controller!.value.position.inMilliseconds.toDouble();
+          });
+        }
+      });
+      
       await _controller!.play();
+      setState(() => _isPlaying = true);
     } catch (e) {
       print('Error initializing video player: $e');
     }
+  }
+  
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
   }
   
   @override
@@ -895,9 +1278,18 @@ class _VideoPlaybackScreenState extends State<VideoPlaybackScreen> {
     
     return GradientScaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           "Video Playback",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.white),
+          style: themeProvider.headlineLarge.copyWith(
+            color: Colors.white,
+            shadows: [
+              Shadow(
+                color: Colors.black.withOpacity(0.3),
+                offset: const Offset(0, 2),
+                blurRadius: 4,
+              ),
+            ],
+          ),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -908,15 +1300,189 @@ class _VideoPlaybackScreenState extends State<VideoPlaybackScreen> {
       ),
       body: Center(
         child: _isInitialized && _controller != null
-            ? AspectRatio(
-                aspectRatio: _controller!.value.aspectRatio,
-                child: Stack(
-                  alignment: Alignment.bottomCenter,
-                  children: [
-                    VideoPlayer(_controller!),
-                    _buildVideoControls(),
-                  ],
-                ),
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Video with controls overlay
+                  AspectRatio(
+                    aspectRatio: _controller!.value.aspectRatio,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Video player
+                        VideoPlayer(_controller!),
+                        
+                        // Play/pause button overlay
+                        AnimatedOpacity(
+                          opacity: _isPlaying ? 0.0 : 0.7,
+                          duration: const Duration(milliseconds: 300),
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _isPlaying ? _controller!.pause() : _controller!.play();
+                              });
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black45,
+                                shape: BoxShape.circle,
+                              ),
+                              padding: const EdgeInsets.all(12),
+                              child: Icon(
+                                _isPlaying ? Icons.pause : Icons.play_arrow,
+                                color: Colors.white,
+                                size: 50,
+                              ),
+                            ),
+                          ),
+                        ),
+                        
+                        // Progress indicator and controls at bottom
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            color: Colors.black54,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Progress slider
+                                Slider(
+                                  value: _currentPosition,
+                                  min: 0.0,
+                                  max: _totalDuration,
+                                  activeColor: themeProvider.accentColor,
+                                  inactiveColor: Colors.grey.shade700,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _currentPosition = value;
+                                      _controller!.seekTo(Duration(milliseconds: value.toInt()));
+                                    });
+                                  },
+                                ),
+                                
+                                // Time and controls
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      // Current time
+                                      Text(
+                                        _formatDuration(Duration(milliseconds: _currentPosition.toInt())),
+                                        style: const TextStyle(color: Colors.white),
+                                      ),
+                                      
+                                      // Control buttons
+                                      Row(
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(Icons.replay_10, color: Colors.white),
+                                            onPressed: () {
+                                              final position = _controller!.value.position;
+                                              final newPosition = position - const Duration(seconds: 10);
+                                              _controller!.seekTo(newPosition);
+                                            },
+                                          ),
+                                          IconButton(
+                                            icon: Icon(
+                                              _isPlaying ? Icons.pause : Icons.play_arrow,
+                                              color: Colors.white,
+                                            ),
+                                            onPressed: () {
+                                              setState(() {
+                                                if (_isPlaying) {
+                                                  _controller!.pause();
+                                                } else {
+                                                  _controller!.play();
+                                                }
+                                              });
+                                            },
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.forward_10, color: Colors.white),
+                                            onPressed: () {
+                                              final position = _controller!.value.position;
+                                              final newPosition = position + const Duration(seconds: 10);
+                                              _controller!.seekTo(newPosition);
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                      
+                                      // Total duration
+                                      Text(
+                                        _formatDuration(Duration(milliseconds: _totalDuration.toInt())),
+                                        style: const TextStyle(color: Colors.white),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Video information
+                  Container(
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isDarkMode ? Colors.black26 : Colors.white.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          path.basename(widget.videoFile.path),
+                          style: themeProvider.titleLarge,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.access_time,
+                              size: 14,
+                              color: themeProvider.secondaryIconColor,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _formatDuration(_controller!.value.duration),
+                              style: themeProvider.bodyMedium,
+                            ),
+                            const SizedBox(width: 16),
+                            Icon(
+                              Icons.calendar_today,
+                              size: 14,
+                              color: themeProvider.secondaryIconColor,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              DateFormat('MMM d, y').format(widget.videoFile.statSync().modified),
+                              style: themeProvider.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               )
             : Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -925,56 +1491,10 @@ class _VideoPlaybackScreenState extends State<VideoPlaybackScreen> {
                   const SizedBox(height: 16),
                   Text(
                     'Loading video...',
-                    style: TextStyle(
-                      color: isDarkMode ? Colors.white : Colors.black87,
-                    ),
+                    style: themeProvider.bodyLarge,
                   ),
                 ],
               ),
-      ),
-    );
-  }
-  
-  Widget _buildVideoControls() {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      color: Colors.black54,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.replay_10, color: Colors.white),
-            onPressed: () {
-              final position = _controller!.value.position;
-              final newPosition = position - const Duration(seconds: 10);
-              _controller!.seekTo(newPosition);
-            },
-          ),
-          IconButton(
-            icon: Icon(
-              _controller!.value.isPlaying ? Icons.pause : Icons.play_arrow,
-              color: Colors.white,
-              size: 32,
-            ),
-            onPressed: () {
-              setState(() {
-                if (_controller!.value.isPlaying) {
-                  _controller!.pause();
-                } else {
-                  _controller!.play();
-                }
-              });
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.forward_10, color: Colors.white),
-            onPressed: () {
-              final position = _controller!.value.position;
-              final newPosition = position + const Duration(seconds: 10);
-              _controller!.seekTo(newPosition);
-            },
-          ),
-        ],
       ),
     );
   }
