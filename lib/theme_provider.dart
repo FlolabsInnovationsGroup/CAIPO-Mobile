@@ -5,13 +5,13 @@ class ThemeProvider extends ChangeNotifier {
   bool _usePurpleGradient = true; // Control which gradient to use in dark mode
 
   // Add animation duration preference
-  Duration _animationDuration = Duration(milliseconds: 300);
+  final Duration _animationDuration = Duration(milliseconds: 300);
   
   // Add font family option
-  String _fontFamily = 'Roboto';
+  final String _fontFamily = 'Roboto';
   
   // Add accent color choice
-  Color _accentColor = Colors.blueAccent;
+  final Color _accentColor = Colors.blueAccent;
 
   ThemeMode get themeMode => _themeMode;
   bool get usePurpleGradient => _usePurpleGradient;

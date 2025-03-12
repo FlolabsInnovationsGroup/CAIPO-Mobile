@@ -4,6 +4,7 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import '../ai/openai_service.dart'; // Import OpenAI Service
 import '../../theme_provider.dart'; // Ensure theme switching works
 import '../../widgets/gradient_scaffold.dart';
+import '../../services/firebase_service.dart'; // Import Firebase Service
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -90,6 +91,11 @@ class HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.pushNamed(context, '/record'),
+        child: const Icon(Icons.mic),
+        backgroundColor: Colors.blueAccent,
+      ),
       bottomNavigationBar: _buildBottomNavBar(),
     );
   }
@@ -148,14 +154,57 @@ class HomeScreenState extends State<HomeScreen> {
           ? Colors.grey.shade500 
           : Colors.grey.shade600,
       currentIndex: 0,
-      onTap: (index) {
-        if (index == 1) {
-          Navigator.pushNamed(context, '/settings');
+      onTap: (index) async {
+        switch (index) {
+          case 1:
+            Navigator.pushNamed(context, '/settings');
+            break;
+          case 2:
+            // Show confirmation dialog before logout
+            final shouldLogout = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Logout'),
+                content: const Text('Are you sure you want to logout?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Logout'),
+                  ),
+                ],
+              ),
+            );
+            
+            if (shouldLogout == true) {
+              await FirebaseService.signOut();
+              if (mounted) {
+                Navigator.pushNamedAndRemoveUntil(
+                  context, 
+                  '/auth', 
+                  (route) => false
+                );
+              }
+            }
+            break;
         }
       },
       items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.chat_bubble), label: "Chat"),
-        BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Settings"),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.chat_bubble),
+          label: "Chat",
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.settings),
+          label: "Settings",
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.logout),
+          label: "Logout",
+        ),
       ],
     );
   }

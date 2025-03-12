@@ -40,14 +40,14 @@ class DefaultFirebaseOptions {
     }
   }
 
-static const FirebaseOptions web = FirebaseOptions(
-  apiKey: 'AIzaSyDj3chZOV8Vs2dDHzNriwekpnJ76eSAZXw',
-  appId: '1:523970252754:web:81de1308208caadc91820b',  // Updated to new app ID
-  messagingSenderId: '523970252754',
-  projectId: 'caipo-mobile-8aa1c',
-  authDomain: 'caipo-mobile-8aa1c.firebaseapp.com',
-  storageBucket: 'caipo-mobile-8aa1c.firebasestorage.app',
-);
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyDj3chZOV8Vs2dDHzNriwekpnJ76eSAZXw',
+    appId: '1:523970252754:web:9ff3f1069320b4f991820b',
+    messagingSenderId: '523970252754',
+    projectId: 'caipo-mobile-8aa1c',
+    authDomain: 'caipo-mobile-8aa1c.firebaseapp.com',
+    storageBucket: 'caipo-mobile-8aa1c.firebasestorage.app',
+  );
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDt7i6wgC_61QXqbUWr0Nc_5yGy6kAZEHw',
@@ -63,6 +63,8 @@ static const FirebaseOptions web = FirebaseOptions(
     messagingSenderId: '523970252754',
     projectId: 'caipo-mobile-8aa1c',
     storageBucket: 'caipo-mobile-8aa1c.firebasestorage.app',
+    androidClientId: '523970252754-0ir6826s7fhhfbghe5i2sqsgj3o30q6b.apps.googleusercontent.com',
+    iosClientId: '523970252754-ikdqtsur14au8niter1r289qr79jh1ap.apps.googleusercontent.com',
     iosBundleId: 'com.example.caipoappv0',
   );
 
@@ -72,16 +74,19 @@ static const FirebaseOptions web = FirebaseOptions(
     messagingSenderId: '523970252754',
     projectId: 'caipo-mobile-8aa1c',
     storageBucket: 'caipo-mobile-8aa1c.firebasestorage.app',
+    androidClientId: '523970252754-0ir6826s7fhhfbghe5i2sqsgj3o30q6b.apps.googleusercontent.com',
+    iosClientId: '523970252754-ikdqtsur14au8niter1r289qr79jh1ap.apps.googleusercontent.com',
     iosBundleId: 'com.example.caipoappv0',
   );
 
-  static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyDj3chZOV8Vs2dDHzNriwekpnJ76eSAZXw',
-    appId: '1:523970252754:web:9ff3f1069320b4f991820b',
-    messagingSenderId: '523970252754',
-    projectId: 'caipo-mobile-8aa1c',
-    authDomain: 'caipo-mobile-8aa1c.firebaseapp.com',
-    storageBucket: 'caipo-mobile-8aa1c.firebasestorage.app',
-  );
+static const FirebaseOptions windows = FirebaseOptions(
+  apiKey: 'AIzaSyDj3chZOV8Vs2dDHzNriwekpnJ76eSAZXw',
+  appId: '1:523970252754:web:9ff3f1069320b4f991820b',
+  messagingSenderId: '523970252754',
+  projectId: 'caipo-mobile-8aa1c',
+  authDomain: 'caipo-mobile-8aa1c.firebaseapp.com',
+  storageBucket: 'caipo-mobile-8aa1c.firebasestorage.app',
+);
+
 
 }

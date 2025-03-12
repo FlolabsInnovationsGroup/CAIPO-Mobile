@@ -6,12 +6,14 @@ class GradientScaffold extends StatelessWidget {
   final Widget body;
   final PreferredSizeWidget? appBar;
   final Widget? bottomNavigationBar;
+  final Widget? floatingActionButton;
 
   const GradientScaffold({
     super.key,
     required this.body,
     this.appBar,
     this.bottomNavigationBar,
+    this.floatingActionButton,
   });
 
   @override
@@ -21,6 +23,7 @@ class GradientScaffold extends StatelessWidget {
     return Scaffold(
       appBar: appBar,
       bottomNavigationBar: bottomNavigationBar,
+      floatingActionButton: floatingActionButton,
       backgroundColor: themeProvider.themeMode == ThemeMode.dark 
           ? Colors.black 
           : Colors.white,
