@@ -65,7 +65,7 @@ class RecordingScreenState extends State<RecordingScreen> with TickerProviderSta
   final bool _isHoveringPause = false;
   
   // For hover effects
-  Map<String, bool> _hoverStates = {};
+  final Map<String, bool> _hoverStates = {};
 
   @override
   void initState() {

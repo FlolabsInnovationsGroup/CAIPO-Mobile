@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/gradient_scaffold.dart';
 import '../../widgets/base_screen.dart';
-import 'dart:math';
 import 'dart:async';
 
 class AdvancedSettingsPage extends StatefulWidget {
@@ -1164,9 +1163,9 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Ticker
                           ),
                           visualDensity: VisualDensity.comfortable,
                         ).copyWith(
-                          backgroundColor: MaterialStateProperty.resolveWith<Color>(
-                            (Set<MaterialState> states) {
-                              if (states.contains(MaterialState.disabled)) {
+                          backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                            (Set<WidgetState> states) {
+                              if (states.contains(WidgetState.disabled)) {
                                 return Colors.grey.withOpacity(0.2);
                               }
                               return themeProvider.accentColor;

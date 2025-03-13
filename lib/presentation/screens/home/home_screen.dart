@@ -1,19 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
 import '../../../data/services/openai_service.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/gradient_scaffold.dart';
-import '../../widgets/base_screen.dart';
 import '../../../data/services/firebase_service.dart';
 import '../../widgets/recent_recordings_sheet.dart';
 import '../ai/transcription_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -1630,7 +1626,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),

@@ -31,7 +31,7 @@ class AudioWaveform extends StatefulWidget {
   final double minBarHeight;
   
   const AudioWaveform({
-    Key? key,
+    super.key,
     required this.samples,
     this.barWidth = 3.0,
     this.spacing = 2.0,
@@ -41,7 +41,7 @@ class AudioWaveform extends StatefulWidget {
     this.animate = true,
     this.isGenerating = false,
     this.minBarHeight = 0.05,
-  }) : super(key: key);
+  });
 
   @override
   State<AudioWaveform> createState() => _AudioWaveformState();
@@ -239,7 +239,7 @@ class AudioWaveformGenerator extends StatefulWidget {
   final int audioDuration;
   
   const AudioWaveformGenerator({
-    Key? key,
+    super.key,
     required this.audioFilePath,
     this.barWidth = 3.0,
     this.spacing = 2.0,
@@ -248,7 +248,7 @@ class AudioWaveformGenerator extends StatefulWidget {
     this.inactiveColor = Colors.grey,
     this.sampleCount = 100,
     this.audioDuration = 0,
-  }) : super(key: key);
+  });
 
   @override
   State<AudioWaveformGenerator> createState() => _AudioWaveformGeneratorState();

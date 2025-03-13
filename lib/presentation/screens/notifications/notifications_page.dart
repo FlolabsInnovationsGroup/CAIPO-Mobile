@@ -76,7 +76,7 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
   final List<String> _tabs = ['All', 'Messages', 'Transcriptions', 'Updates'];
   
   // For hover effects
-  Map<String, bool> _hoverStates = {};
+  final Map<String, bool> _hoverStates = {};
   
   @override
   void initState() {

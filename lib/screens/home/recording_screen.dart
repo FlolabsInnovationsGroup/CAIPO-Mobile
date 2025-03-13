@@ -12,8 +12,8 @@ class RecordingScreen extends StatefulWidget {
 }
 
 class RecordingScreenState extends State<RecordingScreen> {
-  FlutterSoundRecorder _audioRecorder = FlutterSoundRecorder();
-  FlutterSoundPlayer _audioPlayer = FlutterSoundPlayer();
+  final FlutterSoundRecorder _audioRecorder = FlutterSoundRecorder();
+  final FlutterSoundPlayer _audioPlayer = FlutterSoundPlayer();
   bool _isRecording = false;
   String? _audioFilePath;
   File? _videoFile;

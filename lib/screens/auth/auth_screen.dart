@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../../services/firebase_service.dart';
+import '../../data/services/firebase_service.dart';
 import '../../widgets/gradient_scaffold.dart';
 import '../../theme_provider.dart';
 

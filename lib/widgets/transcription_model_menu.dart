@@ -27,12 +27,12 @@ class TranscriptionModelMenu extends StatefulWidget {
   final VoidCallback? onClose;
   
   const TranscriptionModelMenu({
-    Key? key,
+    super.key,
     required this.selectedModel,
     required this.availableModels,
     required this.onModelSelected,
     this.onClose,
-  }) : super(key: key);
+  });
 
   @override
   State<TranscriptionModelMenu> createState() => _TranscriptionModelMenuState();

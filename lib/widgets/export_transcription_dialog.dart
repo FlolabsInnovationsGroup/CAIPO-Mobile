@@ -4,13 +4,23 @@ import '../theme_provider.dart';
 import '../services/transcription_exporter.dart';
 import 'package:share_plus/share_plus.dart';
 
+// Add the missing enum definition
+enum ExportFormat {
+  plainText,
+  richText,
+  json,
+  srt,
+  vtt,
+  docx,
+}
+
 class ExportTranscriptionDialog extends StatefulWidget {
   final Map<String, dynamic> transcriptionData;
   
   const ExportTranscriptionDialog({
-    Key? key,
+    super.key,
     required this.transcriptionData,
-  }) : super(key: key);
+  });
 
   @override
   _ExportTranscriptionDialogState createState() => _ExportTranscriptionDialogState();

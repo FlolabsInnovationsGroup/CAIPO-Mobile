@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../theme_provider.dart';
 
 class RecentRecordingsSheet extends StatefulWidget {
@@ -7,13 +8,13 @@ class RecentRecordingsSheet extends StatefulWidget {
   final ScrollController scrollController;
   
   const RecentRecordingsSheet({
-    Key? key,
+    super.key,
     required this.onRecordingSelected,
     required this.scrollController,
-  }) : super(key: key);
+  });
 
   @override
-  _RecentRecordingsSheetState createState() => _RecentRecordingsSheetState();
+  State<RecentRecordingsSheet> createState() => _RecentRecordingsSheetState();
 }
 
 class _RecentRecordingsSheetState extends State<RecentRecordingsSheet> {
@@ -66,6 +67,21 @@ class _RecentRecordingsSheetState extends State<RecentRecordingsSheet> {
       return '${hours}h ${remainingMinutes}m ${remainingSeconds}s';
     } else {
       return '${minutes}m ${remainingSeconds}s';
+    }
+  }
+  
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+    
+    if (difference.inDays == 0) {
+      return 'Today, ${DateFormat('h:mm a').format(date)}';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday, ${DateFormat('h:mm a').format(date)}';
+    } else if (difference.inDays < 7) {
+      return '${DateFormat('EEEE').format(date)}, ${DateFormat('h:mm a').format(date)}';
+    } else {
+      return DateFormat('MMM d, yyyy').format(date);
     }
   }
 
@@ -121,6 +137,7 @@ class _RecentRecordingsSheetState extends State<RecentRecordingsSheet> {
                     itemCount: _recordings.length,
                     itemBuilder: (context, index) {
                       final recording = _recordings[index];
+                      final date = recording['date'] as DateTime;
                       
                       return ListTile(
                         leading: Container(
@@ -139,7 +156,7 @@ class _RecentRecordingsSheetState extends State<RecentRecordingsSheet> {
                           style: themeProvider.bodyLarge,
                         ),
                         subtitle: Text(
-                          '${_formatDuration(recording['duration'] as int)} • ${recording['date'].toString().split('.')[0]}',
+                          '${_formatDuration(recording['duration'] as int)} • ${_formatDate(date)}',
                           style: themeProvider.bodySmall.copyWith(
                             color: themeProvider.secondaryTextColor,
                           ),
@@ -148,7 +165,7 @@ class _RecentRecordingsSheetState extends State<RecentRecordingsSheet> {
                           Icons.chevron_right,
                           color: themeProvider.secondaryIconColor,
                         ),
-                        onTap: () => widget.onRecordingSelected(recording['path']),
+                        onTap: () => widget.onRecordingSelected(recording['path'] as String),
                       );
                     },
                   ),

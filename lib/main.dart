@@ -105,7 +105,7 @@ class MyApp extends StatelessWidget {
         // Apply font scaling for accessibility
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
-            textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(0.85, 1.3),
+            textScaler: TextScaler.linear(MediaQuery.of(context).textScaleFactor.clamp(0.85, 1.3)),
           ),
           child: child!,
         );

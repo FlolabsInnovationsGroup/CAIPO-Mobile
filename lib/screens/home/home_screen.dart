@@ -4,7 +4,7 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import '../ai/openai_service.dart'; // Import OpenAI Service
 import '../../theme_provider.dart'; // Ensure theme switching works
 import '../../widgets/gradient_scaffold.dart';
-import '../../services/firebase_service.dart'; // Import Firebase Service
+import '../../data/services/firebase_service.dart'; // Import Firebase Service
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -93,8 +93,8 @@ class HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.pushNamed(context, '/record'),
-        child: const Icon(Icons.mic),
         backgroundColor: Colors.blueAccent,
+        child: const Icon(Icons.mic),
       ),
       bottomNavigationBar: _buildBottomNavBar(),
     );

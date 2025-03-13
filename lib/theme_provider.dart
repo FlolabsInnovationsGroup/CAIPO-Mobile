@@ -12,9 +12,14 @@ class ThemeProvider extends ChangeNotifier {
   
   // Add accent color choice
   final Color _accentColor = Colors.blueAccent;
+  
+  // Add border radius
+  final double _borderRadius = 12.0;
 
   ThemeMode get themeMode => _themeMode;
   bool get usePurpleGradient => _usePurpleGradient;
+  Color get accentColor => _accentColor;
+  double get borderRadius => _borderRadius;
 
   // Get the appropriate scaffold gradient based on theme
   LinearGradient get scaffoldGradient {
@@ -179,4 +184,56 @@ class ThemeProvider extends ChangeNotifier {
         ? Colors.white 
         : Colors.black87;
   }
+
+  // Text styles
+  TextStyle get titleMedium => TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w500,
+    color: primaryTextColor,
+  );
+  
+  TextStyle get titleLarge => TextStyle(
+    fontSize: 20,
+    fontWeight: FontWeight.w500,
+    color: primaryTextColor,
+  );
+  
+  TextStyle get bodyLarge => TextStyle(
+    fontSize: 16,
+    color: primaryTextColor,
+  );
+  
+  TextStyle get bodyMedium => TextStyle(
+    fontSize: 14,
+    color: primaryTextColor,
+  );
+  
+  TextStyle get bodySmall => TextStyle(
+    fontSize: 12,
+    color: secondaryTextColor,
+  );
+  
+  TextStyle get headlineMedium => TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    color: primaryTextColor,
+  );
+  
+  // Text colors
+  Color get primaryTextColor => _themeMode == ThemeMode.dark 
+      ? Colors.white 
+      : Colors.black87;
+      
+  Color get secondaryTextColor => _themeMode == ThemeMode.dark 
+      ? Colors.white70 
+      : Colors.black54;
+      
+  Color get secondaryIconColor => _themeMode == ThemeMode.dark 
+      ? Colors.white70 
+      : Colors.black45;
+
+  ButtonStyle get textButtonStyle => TextButton.styleFrom(
+    foregroundColor: accentColor,
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  );
 }

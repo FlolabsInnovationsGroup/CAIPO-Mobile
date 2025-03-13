@@ -7,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/gradient_scaffold.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 class TranscriptionScreen extends StatefulWidget {

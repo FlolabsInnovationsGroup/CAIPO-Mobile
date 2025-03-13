@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_sound/flutter_sound.dart';
-import 'package:flutter_sound_platform_interface/flutter_sound_recorder_platform_interface.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
@@ -13,7 +12,7 @@ import '../../widgets/gradient_scaffold.dart';
 class TranscriptionScreen extends StatefulWidget {
   final String audioFilePath;
   
-  const TranscriptionScreen({Key? key, required this.audioFilePath}) : super(key: key);
+  const TranscriptionScreen({super.key, required this.audioFilePath});
 
   @override
   TranscriptionScreenState createState() => TranscriptionScreenState();
@@ -32,15 +31,15 @@ class TranscriptionScreenState extends State<TranscriptionScreen> with SingleTic
   int _audioDuration = 0;
   Timer? _progressTimer;
   Timer? _playbackTimer;
-  TextEditingController _textEditingController = TextEditingController();
-  ScrollController _scrollController = ScrollController();
+  final TextEditingController _textEditingController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   
   // Confidence levels for segments (simulated)
   List<Map<String, dynamic>> _segments = [];
   
   // Language options
   String _selectedLanguage = 'English (US)';
-  List<String> _languages = [
+  final List<String> _languages = [
     'English (US)', 
     'English (UK)', 
     'Spanish', 

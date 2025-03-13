@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter/cupertino.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/gradient_scaffold.dart';
 import '../../widgets/base_screen.dart';
@@ -596,7 +595,7 @@ class _PrivacyDataPageState extends State<PrivacyDataPage> with TickerProviderSt
               );
             },
           );
-        }).toList(),
+        }),
         
         const SizedBox(height: 20),
         
@@ -760,7 +759,7 @@ class _PrivacyDataPageState extends State<PrivacyDataPage> with TickerProviderSt
                     );
                   },
                 );
-              }).toList(),
+              }),
               
               const SizedBox(height: 20),
               
