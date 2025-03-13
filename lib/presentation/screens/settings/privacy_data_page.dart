@@ -13,7 +13,7 @@ class PrivacyDataPage extends StatefulWidget {
   _PrivacyDataPageState createState() => _PrivacyDataPageState();
 }
 
-class _PrivacyDataPageState extends State<PrivacyDataPage> with SingleTickerProviderStateMixin, ScreenAnimationMixin {
+class _PrivacyDataPageState extends State<PrivacyDataPage> with TickerProviderStateMixin, ScreenAnimationMixin {
   // Privacy settings
   final Map<String, Map<String, dynamic>> _privacySettings = {
     'Data Sharing': {
@@ -140,7 +140,7 @@ class _PrivacyDataPageState extends State<PrivacyDataPage> with SingleTickerProv
       begin: const Offset(0, 0.1),
       end: Offset.zero,
     ).animate(CurvedAnimation(
-      parent: animationController,
+      parent: screenAnimationController,
       curve: const Interval(0.3, 0.8, curve: Curves.easeOutCubic),
     ));
     
@@ -150,7 +150,7 @@ class _PrivacyDataPageState extends State<PrivacyDataPage> with SingleTickerProv
   
   @override
   void dispose() {
-    animationController.dispose();
+    screenAnimationController.dispose();
     _exportTimer?.cancel();
     super.dispose();
   }
@@ -278,7 +278,7 @@ class _PrivacyDataPageState extends State<PrivacyDataPage> with SingleTickerProv
           ],
         ),
         body: AnimatedBuilder(
-          animation: animationController,
+          animation: screenAnimationController,
           builder: (context, child) {
             return SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -293,7 +293,7 @@ class _PrivacyDataPageState extends State<PrivacyDataPage> with SingleTickerProv
                         begin: const Offset(0, 0.2),
                         end: Offset.zero,
                       ).animate(CurvedAnimation(
-                        parent: animationController,
+                        parent: screenAnimationController,
                         curve: const Interval(0.0, 0.5, curve: Curves.easeOutCubic),
                       )),
                       child: _buildHeaderSection(isDarkMode, themeProvider),
@@ -308,7 +308,7 @@ class _PrivacyDataPageState extends State<PrivacyDataPage> with SingleTickerProv
                         begin: const Offset(0, 0.2),
                         end: Offset.zero,
                       ).animate(CurvedAnimation(
-                        parent: animationController,
+                        parent: screenAnimationController,
                         curve: const Interval(0.2, 0.7, curve: Curves.easeOutCubic),
                       )),
                       child: _buildCategoryTabs(isDarkMode, themeProvider),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/gradient_scaffold.dart';
+import '../../widgets/base_screen.dart';
 import 'dart:math';
 import 'dart:async';
 
@@ -12,7 +13,7 @@ class AdvancedSettingsPage extends StatefulWidget {
   _AdvancedSettingsPageState createState() => _AdvancedSettingsPageState();
 }
 
-class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with SingleTickerProviderStateMixin {
+class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with TickerProviderStateMixin, ScreenAnimationMixin {
   // Settings values
   final Map<String, Map<String, dynamic>> _settings = {
     'Developer Options': {
@@ -138,7 +139,7 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
   final String _searchQuery = '';
   String? _selectedCategory;
   bool _showSystemInfo = false;
-  final bool _showPerformanceMetrics = false;
+  final bool _isShowingPerformanceMetrics = false;
   Timer? _metricsRefreshTimer;
   final Map<String, double> _metrics = {
     'Memory Usage': 0,
@@ -148,16 +149,67 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
     'Storage': 0,
   };
   
+  // Map to track hover states for interactive UI
+  final Map<String, bool> _hoverStates = {};
+  
+  // Animations for staggered entry
+  late Animation<double> _headerAnimation;
+  late Animation<double> _warningAnimation;
+  late Animation<double> _tabsAnimation;
+  late Animation<double> _contentAnimation;
+  late Animation<double> _bottomBarAnimation;
+  
   // For animations and expanded sections
-  late AnimationController _animationController;
+  late AnimationController _expandAnimationController;
   final Set<String> _expandedCategories = {'Developer Options', 'Performance Options', 'Debugging Options', 'Advanced Features'};
   
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
+    _expandAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
+    );
+    
+    // Initialize staggered animations using ScreenAnimationMixin
+    _headerAnimation = createStaggeredAnimation(
+      begin: 0.0,
+      end: 1.0,
+      startInterval: 0.0,
+      endInterval: 0.2,
+      curve: Curves.easeOutQuart,
+    );
+    
+    _warningAnimation = createStaggeredAnimation(
+      begin: 0.0,
+      end: 1.0,
+      startInterval: 0.1,
+      endInterval: 0.3,
+      curve: Curves.easeOutQuart,
+    );
+    
+    _tabsAnimation = createStaggeredAnimation(
+      begin: 0.0,
+      end: 1.0,
+      startInterval: 0.2,
+      endInterval: 0.4,
+      curve: Curves.easeOutQuart,
+    );
+    
+    _contentAnimation = createStaggeredAnimation(
+      begin: 0.0,
+      end: 1.0,
+      startInterval: 0.3,
+      endInterval: 0.5,
+      curve: Curves.easeOutQuart,
+    );
+    
+    _bottomBarAnimation = createStaggeredAnimation(
+      begin: 0.0,
+      end: 1.0,
+      startInterval: 0.4,
+      endInterval: 0.6,
+      curve: Curves.easeOutQuart,
     );
     
     // Set initial selected category
@@ -171,8 +223,9 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
   
   @override
   void dispose() {
-    _animationController.dispose();
+    _expandAnimationController.dispose();
     _logsScrollController.dispose();
+    _logInputController.dispose();
     super.dispose();
   }
   
@@ -335,17 +388,20 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
       },
       child: GradientScaffold(
         appBar: AppBar(
-          title: Text(
-            'Advanced Settings',
-            style: themeProvider.headlineLarge.copyWith(
-              color: Colors.white,
-              shadows: [
-                Shadow(
-                  color: Colors.black.withOpacity(0.3),
-                  offset: const Offset(0, 2),
-                  blurRadius: 4,
-                ),
-              ],
+          title: FadeTransition(
+            opacity: _headerAnimation,
+            child: Text(
+              'Advanced Settings',
+              style: themeProvider.headlineLarge.copyWith(
+                color: Colors.white,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withOpacity(0.3),
+                    offset: const Offset(0, 2),
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
             ),
           ),
           leading: IconButton(
@@ -378,18 +434,54 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header with warning
-            _buildWarningHeader(isDarkMode, themeProvider),
+            FadeTransition(
+              opacity: _warningAnimation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, -0.2),
+                  end: Offset.zero,
+                ).animate(_warningAnimation),
+                child: _buildWarningHeader(isDarkMode, themeProvider),
+              ),
+            ),
             
             // Category tabs
-            _buildCategoryTabs(isDarkMode, themeProvider),
+            FadeTransition(
+              opacity: _tabsAnimation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.2),
+                  end: Offset.zero,
+                ).animate(_tabsAnimation),
+                child: _buildCategoryTabs(isDarkMode, themeProvider),
+              ),
+            ),
             
             // Main content
             Expanded(
-              child: _buildMainContent(isDarkMode, themeProvider),
+              child: FadeTransition(
+                opacity: _contentAnimation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.1),
+                    end: Offset.zero,
+                  ).animate(_contentAnimation),
+                  child: _buildMainContent(isDarkMode, themeProvider),
+                ),
+              ),
             ),
             
             // Save button at bottom
-            _buildBottomActionBar(isDarkMode, themeProvider),
+            FadeTransition(
+              opacity: _bottomBarAnimation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.2),
+                  end: Offset.zero,
+                ).animate(_bottomBarAnimation),
+                child: _buildBottomActionSection(isDarkMode, themeProvider),
+              ),
+            ),
           ],
         ),
       ),
@@ -399,7 +491,7 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
   Widget _buildMainContent(bool isDarkMode, ThemeProvider themeProvider) {
     // Show system info if enabled
     if (_showSystemInfo) {
-      return _buildSystemInfoView(isDarkMode, themeProvider);
+      return _buildSystemInfoSection(isDarkMode, themeProvider);
     }
     
     // Show all settings
@@ -465,27 +557,61 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
       margin: const EdgeInsets.all(16.0),
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.1),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.orange.withOpacity(0.1),
+            Colors.orange.withOpacity(0.2),
+          ],
+        ),
         borderRadius: BorderRadius.circular(themeProvider.borderRadius),
         border: Border.all(
           color: Colors.orange.withOpacity(0.3),
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.orange.withOpacity(0.05),
+            blurRadius: 10,
+            spreadRadius: 0,
+          ),
+        ],
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.warning_amber_rounded,
-            color: Colors.orange,
-            size: 24,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+            ),
+            child: Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.orange,
+              size: 24,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              'These settings are intended for advanced users. Changes may affect app stability.',
-              style: themeProvider.bodyMedium.copyWith(
-                color: Colors.orange.shade800,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Advanced Settings',
+                  style: themeProvider.titleMedium.copyWith(
+                    color: Colors.orange.shade800,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'These settings are intended for advanced users. Changes may affect app stability.',
+                  style: themeProvider.bodyMedium.copyWith(
+                    color: Colors.orange.shade800,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -501,47 +627,88 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
         scrollDirection: Axis.horizontal,
         children: _settings.keys.map((category) {
           final isSelected = _selectedCategory == category;
-          return GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedCategory = category;
-              });
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              margin: const EdgeInsets.only(right: 8),
-              decoration: BoxDecoration(
-                color: isSelected 
-                    ? themeProvider.accentColor.withOpacity(isDarkMode ? 0.3 : 0.1)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(themeProvider.borderRadius),
-                border: Border.all(
-                  color: isSelected 
-                      ? themeProvider.accentColor 
-                      : themeProvider.settingsCardBorderColor,
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    _getCategoryIcon(category),
-                    size: 18,
-                    color: isSelected 
-                        ? themeProvider.accentColor
-                        : themeProvider.secondaryIconColor,
+          final hoverKey = 'tab_$category';
+          final isHovering = _hoverStates[hoverKey] ?? false;
+          
+          return MouseRegion(
+            onEnter: (_) => setState(() => _hoverStates[hoverKey] = true),
+            onExit: (_) => setState(() => _hoverStates[hoverKey] = false),
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedCategory = category;
+                });
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: isSelected 
+                        ? [
+                            themeProvider.accentColor.withOpacity(isDarkMode ? 0.3 : 0.2),
+                            themeProvider.accentColor.withOpacity(isDarkMode ? 0.2 : 0.1),
+                          ]
+                        : isHovering
+                            ? [
+                                Colors.grey.withOpacity(isDarkMode ? 0.2 : 0.1),
+                                Colors.grey.withOpacity(isDarkMode ? 0.1 : 0.05),
+                              ]
+                            : [
+                                Colors.transparent,
+                                Colors.transparent,
+                              ],
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    category.replaceAll(' Options', ''),
-                    style: themeProvider.bodyMedium.copyWith(
+                  borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                  border: Border.all(
+                    color: isSelected 
+                        ? themeProvider.accentColor 
+                        : isHovering
+                            ? themeProvider.accentColor.withOpacity(0.3)
+                            : themeProvider.settingsCardBorderColor,
+                    width: isSelected ? 1.5 : 1,
+                  ),
+                  boxShadow: isSelected || isHovering
+                      ? [
+                          BoxShadow(
+                            color: isSelected
+                                ? themeProvider.accentColor.withOpacity(0.1)
+                                : Colors.black.withOpacity(0.03),
+                            blurRadius: 4,
+                            spreadRadius: 0,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : [],
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _getCategoryIcon(category),
+                      size: 18,
                       color: isSelected 
                           ? themeProvider.accentColor
-                          : themeProvider.secondaryTextColor,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          : isHovering
+                              ? themeProvider.accentColor.withOpacity(0.7)
+                              : themeProvider.secondaryIconColor,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Text(
+                      category.replaceAll(' Options', ''),
+                      style: themeProvider.bodyMedium.copyWith(
+                        color: isSelected 
+                            ? themeProvider.accentColor
+                            : isHovering
+                                ? themeProvider.accentColor.withOpacity(0.7)
+                                : themeProvider.secondaryTextColor,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -550,50 +717,280 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
     );
   }
 
-  Widget _buildSystemInfoView(bool isDarkMode, ThemeProvider themeProvider) {
-    return ListView(
-      padding: const EdgeInsets.all(16.0),
-      children: [
-        Container(
-          decoration: themeProvider.settingsCardDecoration,
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'System Information',
-                style: themeProvider.settingsHeaderStyle,
+  Widget _buildSystemInfoSection(bool isDarkMode, ThemeProvider themeProvider) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - value)),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 20.0),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDarkMode
+                      ? [
+                          Colors.black.withOpacity(0.6),
+                          Colors.black.withOpacity(0.4),
+                        ]
+                      : [
+                          Colors.white.withOpacity(0.9),
+                          Colors.white.withOpacity(0.7),
+                        ],
+                ),
+                borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                border: Border.all(
+                  color: isDarkMode
+                      ? Colors.grey.shade800.withOpacity(0.5)
+                      : Colors.grey.shade300,
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    spreadRadius: 0,
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              _buildSystemInfoRow('Operating System', 'Android 13', themeProvider),
-              _buildSystemInfoRow('Device Model', 'Pixel 6', themeProvider),
-              _buildSystemInfoRow('App Version', '1.0.0 (build 100)', themeProvider),
-              _buildSystemInfoRow('Screen Resolution', '1080 x 2400', themeProvider),
-              _buildSystemInfoRow('Memory Usage', '1.2 GB / 8 GB', themeProvider),
-              _buildSystemInfoRow('Storage', '45.3 GB free of 128 GB', themeProvider),
-            ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _showSystemInfo = !_showSystemInfo;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            themeProvider.accentColor.withOpacity(0.2),
+                            themeProvider.accentColor.withOpacity(0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(themeProvider.borderRadius),
+                          topRight: Radius.circular(themeProvider.borderRadius),
+                          bottomLeft: _showSystemInfo ? Radius.zero : Radius.circular(themeProvider.borderRadius),
+                          bottomRight: _showSystemInfo ? Radius.zero : Radius.circular(themeProvider.borderRadius),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  themeProvider.accentColor.withOpacity(0.3),
+                                  themeProvider.accentColor.withOpacity(0.2),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                            ),
+                            child: Icon(
+                              Icons.info_outline,
+                              color: themeProvider.accentColor,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'System Information',
+                            style: themeProvider.titleMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: themeProvider.primaryTextColor,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const Spacer(),
+                          AnimatedRotation(
+                            turns: _showSystemInfo ? 0.5 : 0,
+                            duration: const Duration(milliseconds: 300),
+                            child: Icon(
+                              Icons.keyboard_arrow_down,
+                              color: themeProvider.primaryIconColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    height: _showSystemInfo ? null : 0,
+                    child: _showSystemInfo
+                        ? Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSystemInfoItem(
+                                  icon: Icons.phone_android,
+                                  title: 'Device',
+                                  value: 'iPhone 13 Pro',
+                                  isDarkMode: isDarkMode,
+                                  themeProvider: themeProvider,
+                                ),
+                                _buildSystemInfoItem(
+                                  icon: Icons.memory,
+                                  title: 'OS Version',
+                                  value: 'iOS 16.2',
+                                  isDarkMode: isDarkMode,
+                                  themeProvider: themeProvider,
+                                ),
+                                _buildSystemInfoItem(
+                                  icon: Icons.storage,
+                                  title: 'Storage',
+                                  value: '45.2 GB Free / 128 GB',
+                                  isDarkMode: isDarkMode,
+                                  themeProvider: themeProvider,
+                                ),
+                                _buildSystemInfoItem(
+                                  icon: Icons.memory_outlined,
+                                  title: 'RAM',
+                                  value: '2.1 GB Free / 6 GB',
+                                  isDarkMode: isDarkMode,
+                                  themeProvider: themeProvider,
+                                ),
+                                _buildSystemInfoItem(
+                                  icon: Icons.app_settings_alt,
+                                  title: 'App Version',
+                                  value: '1.2.3 (Build 45)',
+                                  isDarkMode: isDarkMode,
+                                  themeProvider: themeProvider,
+                                ),
+                                const SizedBox(height: 16),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: isDarkMode
+                                        ? Colors.blue.withOpacity(0.1)
+                                        : Colors.blue.withOpacity(0.05),
+                                    borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                                    border: Border.all(
+                                      color: Colors.blue.withOpacity(0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.info_outline,
+                                        color: Colors.blue,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'This information may be useful for troubleshooting and support.',
+                                          style: themeProvider.bodySmall.copyWith(
+                                            color: isDarkMode ? Colors.blue.shade300 : Colors.blue.shade800,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 
-  Widget _buildSystemInfoRow(String label, String value, ThemeProvider themeProvider) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
+  Widget _buildSystemInfoItem({
+    required IconData icon,
+    required String title,
+    required String value,
+    required bool isDarkMode,
+    required ThemeProvider themeProvider,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDarkMode
+              ? [
+                  Colors.black.withOpacity(0.4),
+                  Colors.black.withOpacity(0.2),
+                ]
+              : [
+                  Colors.white.withOpacity(0.7),
+                  Colors.white.withOpacity(0.5),
+                ],
+        ),
+        borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+        border: Border.all(
+          color: isDarkMode
+              ? Colors.grey.shade800.withOpacity(0.3)
+              : Colors.grey.shade300.withOpacity(0.5),
+          width: 1,
+        ),
+      ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: themeProvider.bodyMedium.copyWith(
-              color: themeProvider.secondaryTextColor,
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  themeProvider.accentColor.withOpacity(0.2),
+                  themeProvider.accentColor.withOpacity(0.1),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+            ),
+            child: Icon(
+              icon,
+              color: themeProvider.accentColor,
+              size: 18,
             ),
           ),
-          Text(
-            value,
-            style: themeProvider.bodyMedium.copyWith(
-              fontWeight: FontWeight.w500,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: themeProvider.bodyMedium.copyWith(
+                    color: themeProvider.secondaryTextColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: themeProvider.bodyMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: themeProvider.primaryTextColor,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -613,39 +1010,178 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
     return Container(); // Placeholder return, actual implementation needed
   }
 
-  Widget _buildBottomActionBar(bool isDarkMode, ThemeProvider themeProvider) {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: themeProvider.settingsBottomBarDecoration,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          TextButton.icon(
-            onPressed: _resetAllSettings,
-            icon: const Icon(Icons.restore),
-            label: const Text('Reset All'),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
-          ),
-          ElevatedButton(
-            onPressed: haveUnsavedChanges ? _saveSettings : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: themeProvider.accentColor,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: themeProvider.accentColor.withOpacity(0.5),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-            child: Text(
-              'Save Changes',
-              style: themeProvider.titleMedium.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
+  Widget _buildBottomActionSection(bool isDarkMode, ThemeProvider themeProvider) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - value)),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDarkMode
+                      ? [
+                          Colors.black.withOpacity(0.6),
+                          Colors.black.withOpacity(0.4),
+                        ]
+                      : [
+                          Colors.white.withOpacity(0.9),
+                          Colors.white.withOpacity(0.7),
+                        ],
+                ),
+                borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                border: Border.all(
+                  color: isDarkMode
+                      ? Colors.grey.shade800.withOpacity(0.5)
+                      : Colors.grey.shade300,
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (haveUnsavedChanges)
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeOut,
+                      builder: (context, value, child) {
+                        return Opacity(
+                          opacity: value,
+                          child: Transform.translate(
+                            offset: Offset(0, 10 * (1 - value)),
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    themeProvider.accentColor.withOpacity(0.1),
+                                    themeProvider.accentColor.withOpacity(0.05),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                                border: Border.all(
+                                  color: themeProvider.accentColor.withOpacity(0.2),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.info_outline,
+                                    color: themeProvider.accentColor,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'You have unsaved changes. Save or reset to apply changes.',
+                                      style: themeProvider.bodySmall.copyWith(
+                                        color: themeProvider.accentColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TextButton.icon(
+                        onPressed: haveUnsavedChanges ? _resetAllSettings : null,
+                        icon: Icon(
+                          Icons.refresh,
+                          color: haveUnsavedChanges
+                              ? Colors.red.shade300
+                              : Colors.grey.withOpacity(0.5),
+                          size: 18,
+                        ),
+                        label: Text(
+                          'Reset',
+                          style: themeProvider.bodyMedium.copyWith(
+                            color: haveUnsavedChanges
+                                ? Colors.red.shade300
+                                : Colors.grey.withOpacity(0.5),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                            side: BorderSide(
+                              color: haveUnsavedChanges
+                                  ? Colors.red.shade300.withOpacity(0.3)
+                                  : Colors.transparent,
+                              width: 1,
+                            ),
+                          ),
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: haveUnsavedChanges ? _saveSettings : null,
+                        icon: Icon(
+                          Icons.save,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                        label: Text(
+                          'Save Changes',
+                          style: themeProvider.bodyMedium.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          backgroundColor: Colors.transparent,
+                          foregroundColor: Colors.white,
+                          elevation: haveUnsavedChanges ? 4 : 0,
+                          shadowColor: themeProvider.accentColor.withOpacity(0.4),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                          ),
+                          visualDensity: VisualDensity.comfortable,
+                        ).copyWith(
+                          backgroundColor: MaterialStateProperty.resolveWith<Color>(
+                            (Set<MaterialState> states) {
+                              if (states.contains(MaterialState.disabled)) {
+                                return Colors.grey.withOpacity(0.2);
+                              }
+                              return themeProvider.accentColor;
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -692,18 +1228,57 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Container(
         padding: const EdgeInsets.all(16.0),
-        decoration: themeProvider.settingsHeaderDecoration,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDarkMode
+                ? [
+                    themeProvider.accentColor.withOpacity(0.1),
+                    themeProvider.accentColor.withOpacity(0.05),
+                  ]
+                : [
+                    themeProvider.accentColor.withOpacity(0.1),
+                    themeProvider.accentColor.withOpacity(0.05),
+                  ],
+          ),
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+          boxShadow: [
+            BoxShadow(
+              color: themeProvider.accentColor.withOpacity(0.05),
+              blurRadius: 10,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
         child: Row(
           children: [
-            Icon(
-              _getCategoryIcon(category),
-              color: themeProvider.accentColor,
-              size: 24,
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    themeProvider.accentColor.withOpacity(0.2),
+                    themeProvider.accentColor.withOpacity(0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+              ),
+              child: Icon(
+                _getCategoryIcon(category),
+                color: themeProvider.accentColor,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 12),
             Text(
               category,
-              style: themeProvider.settingsHeaderStyle,
+              style: themeProvider.settingsHeaderStyle.copyWith(
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
             ),
           ],
         ),
@@ -716,28 +1291,64 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
       margin: const EdgeInsets.only(bottom: 20.0),
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: isDarkMode ? Colors.black.withOpacity(0.2) : Colors.white.withOpacity(0.1),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDarkMode
+              ? [
+                  Colors.black.withOpacity(0.5),
+                  Colors.black.withOpacity(0.3),
+                ]
+              : [
+                  Colors.white.withOpacity(0.9),
+                  Colors.white.withOpacity(0.7),
+                ],
+        ),
         borderRadius: BorderRadius.circular(themeProvider.borderRadius),
         border: Border.all(
-          color: Colors.grey.withOpacity(0.2),
+          color: isDarkMode
+              ? Colors.grey.shade800.withOpacity(0.5)
+              : Colors.grey.shade300,
           width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            spreadRadius: 0,
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(
-                Icons.tune,
-                color: themeProvider.accentColor,
-                size: 18,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      themeProvider.accentColor.withOpacity(0.2),
+                      themeProvider.accentColor.withOpacity(0.1),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                ),
+                child: Icon(
+                  Icons.tune,
+                  color: themeProvider.accentColor,
+                  size: 18,
+                ),
               ),
               const SizedBox(width: 8),
               Text(
                 'Logging Level',
                 style: themeProvider.titleMedium.copyWith(
                   fontWeight: FontWeight.bold,
+                  color: themeProvider.primaryTextColor,
                 ),
               ),
             ],
@@ -746,8 +1357,20 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
           Container(
             height: 40,
             decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: isDarkMode
+                    ? [
+                        Colors.black.withOpacity(0.6),
+                        Colors.black.withOpacity(0.4),
+                      ]
+                    : [
+                        Colors.grey.shade200.withOpacity(0.6),
+                        Colors.grey.shade100.withOpacity(0.4),
+                      ],
+              ),
               borderRadius: BorderRadius.circular(20),
-              color: isDarkMode ? Colors.black38 : Colors.white10,
             ),
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
@@ -755,6 +1378,8 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
               itemBuilder: (context, index) {
                 final level = logLevels[index];
                 final isSelected = selectedLogLevel == level;
+                final hoverKey = 'log_level_$level';
+                final isHovering = _hoverStates[hoverKey] ?? false;
                 
                 // Choose appropriate color based on log level
                 Color levelColor;
@@ -778,21 +1403,51 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
                     levelColor = Colors.grey;
                 }
                 
-                return GestureDetector(
-                  onTap: () => _updateLogLevel(level),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      color: isSelected ? levelColor : Colors.transparent,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Center(
-                      child: Text(
-                        level,
-                        style: themeProvider.bodyMedium.copyWith(
-                          color: isSelected ? Colors.white : levelColor,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                return MouseRegion(
+                  onEnter: (_) => setState(() => _hoverStates[hoverKey] = true),
+                  onExit: (_) => setState(() => _hoverStates[hoverKey] = false),
+                  child: GestureDetector(
+                    onTap: () => _updateLogLevel(level),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        gradient: isSelected
+                            ? LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  levelColor,
+                                  levelColor.withOpacity(0.8),
+                                ],
+                              )
+                            : null,
+                        color: isHovering && !isSelected
+                            ? levelColor.withOpacity(0.1)
+                            : null,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: levelColor.withOpacity(0.3),
+                                  blurRadius: 4,
+                                  spreadRadius: 0,
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Center(
+                        child: Text(
+                          level,
+                          style: themeProvider.bodyMedium.copyWith(
+                            color: isSelected
+                                ? Colors.white
+                                : isHovering
+                                    ? levelColor
+                                    : levelColor.withOpacity(0.7),
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          ),
                         ),
                       ),
                     ),
@@ -801,12 +1456,39 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
               },
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Controls the verbosity of logs. Higher levels include all lower levels.',
-            style: themeProvider.bodySmall.copyWith(
-              color: themeProvider.secondaryTextColor,
-              fontStyle: FontStyle.italic,
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isDarkMode
+                  ? Colors.black.withOpacity(0.2)
+                  : Colors.grey.shade100.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+              border: Border.all(
+                color: isDarkMode
+                    ? Colors.grey.shade800.withOpacity(0.3)
+                    : Colors.grey.shade300.withOpacity(0.5),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 16,
+                  color: themeProvider.secondaryIconColor,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Controls the verbosity of logs. Higher levels include all lower levels.',
+                    style: themeProvider.bodySmall.copyWith(
+                      color: themeProvider.secondaryTextColor,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -835,77 +1517,163 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Single
     required bool requiresRestart,
     required ValueChanged<bool> onChanged,
   }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12.0),
-      decoration: themeProvider.settingsCardDecoration,
-      child: Column(
-        children: [
-          ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: themeProvider.getSettingsIconDecoration(isActive: value),
-              child: Icon(
-                icon,
-                color: themeProvider.getSettingsIconColor(isActive: value),
-                size: 20,
-              ),
-            ),
-            title: Text(
-              title,
-              style: themeProvider.settingsTitleStyle,
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: themeProvider.settingsDescriptionStyle,
-                ),
-                if (requiresRestart) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.refresh,
-                        size: 14,
-                        color: Colors.orange,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Requires restart',
-                        style: themeProvider.bodySmall.copyWith(
-                          color: Colors.orange,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-            trailing: Switch.adaptive(
-              value: value,
-              onChanged: onChanged,
-              activeColor: themeProvider.accentColor,
-              activeTrackColor: themeProvider.accentColor.withOpacity(0.4),
-              inactiveThumbColor: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade50,
-              inactiveTrackColor: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
-            ),
+    final hoverKey = 'setting_$title';
+    final isHovering = _hoverStates[hoverKey] ?? false;
+    
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hoverStates[hoverKey] = true),
+      onExit: (_) => setState(() => _hoverStates[hoverKey] = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(bottom: 12.0),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDarkMode
+                ? [
+                    Colors.black.withOpacity(isHovering ? 0.7 : 0.5),
+                    Colors.black.withOpacity(isHovering ? 0.6 : 0.4),
+                  ]
+                : [
+                    Colors.white.withOpacity(isHovering ? 0.95 : 0.9),
+                    Colors.white.withOpacity(isHovering ? 0.9 : 0.8),
+                  ],
           ),
-          if (details.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Text(
-                details,
-                style: themeProvider.bodySmall.copyWith(
-                  color: themeProvider.secondaryTextColor,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isHovering ? 0.1 : 0.05),
+              blurRadius: isHovering ? 8 : 5,
+              spreadRadius: isHovering ? 1 : 0,
+              offset: isHovering ? const Offset(0, 2) : const Offset(0, 1),
             ),
           ],
-        ],
+          border: Border.all(
+            color: isHovering
+                ? themeProvider.accentColor.withOpacity(0.3)
+                : isDarkMode
+                    ? Colors.grey.shade800.withOpacity(0.3)
+                    : Colors.grey.shade300.withOpacity(0.5),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: value
+                        ? [
+                            themeProvider.accentColor.withOpacity(0.3),
+                            themeProvider.accentColor.withOpacity(0.2),
+                          ]
+                        : [
+                            Colors.grey.withOpacity(0.2),
+                            Colors.grey.withOpacity(0.1),
+                          ],
+                  ),
+                  borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                  boxShadow: value
+                      ? [
+                          BoxShadow(
+                            color: themeProvider.accentColor.withOpacity(0.2),
+                            blurRadius: 4,
+                            spreadRadius: 0,
+                          ),
+                        ]
+                      : [],
+                ),
+                child: Icon(
+                  icon,
+                  color: value
+                      ? themeProvider.accentColor
+                      : themeProvider.secondaryIconColor,
+                  size: 20,
+                ),
+              ),
+              title: Text(
+                title,
+                style: themeProvider.settingsTitleStyle.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: themeProvider.settingsDescriptionStyle.copyWith(
+                      color: isDarkMode
+                          ? Colors.grey.shade400
+                          : Colors.grey.shade700,
+                    ),
+                  ),
+                  if (requiresRestart) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.refresh,
+                          size: 14,
+                          color: Colors.orange,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Requires restart',
+                          style: themeProvider.bodySmall.copyWith(
+                            color: Colors.orange,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+              trailing: Switch.adaptive(
+                value: value,
+                onChanged: onChanged,
+                activeColor: themeProvider.accentColor,
+                activeTrackColor: themeProvider.accentColor.withOpacity(0.4),
+                inactiveThumbColor: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade50,
+                inactiveTrackColor: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
+              ),
+            ),
+            if (details.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDarkMode
+                        ? Colors.black.withOpacity(0.2)
+                        : Colors.grey.shade100.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                    border: Border.all(
+                      color: isDarkMode
+                          ? Colors.grey.shade800.withOpacity(0.3)
+                          : Colors.grey.shade300.withOpacity(0.5),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    details,
+                    style: themeProvider.bodySmall.copyWith(
+                      color: themeProvider.secondaryTextColor,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

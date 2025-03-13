@@ -81,30 +81,30 @@ class _BaseScreenState extends State<BaseScreen> with SingleTickerProviderStateM
 /// A mixin that can be used to add animation capabilities to screens
 /// that don't extend BaseScreen but need similar animation functionality
 mixin ScreenAnimationMixin<T extends StatefulWidget> on State<T> {
-  late AnimationController animationController;
+  late AnimationController screenAnimationController;
   late Animation<double> fadeAnimation;
   
   @override
   void initState() {
     super.initState();
-    animationController = AnimationController(
+    screenAnimationController = AnimationController(
       vsync: this as TickerProvider,
       duration: const Duration(milliseconds: 800),
     );
     
     fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: animationController,
+        parent: screenAnimationController,
         curve: Curves.easeOut,
       ),
     );
     
-    animationController.forward();
+    screenAnimationController.forward();
   }
   
   @override
   void dispose() {
-    animationController.dispose();
+    screenAnimationController.dispose();
     super.dispose();
   }
   
@@ -118,7 +118,7 @@ mixin ScreenAnimationMixin<T extends StatefulWidget> on State<T> {
   }) {
     return Tween<double>(begin: begin, end: end).animate(
       CurvedAnimation(
-        parent: animationController,
+        parent: screenAnimationController,
         curve: Interval(startInterval, endInterval, curve: curve),
       ),
     );
