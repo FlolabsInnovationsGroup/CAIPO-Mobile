@@ -11,6 +11,7 @@ import 'package:video_player/video_player.dart';
 import 'package:intl/intl.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/gradient_scaffold.dart';
+import '../../widgets/base_screen.dart';
 import 'package:path/path.dart' as path;
 
 class RecordingScreen extends StatefulWidget {
@@ -20,9 +21,15 @@ class RecordingScreen extends StatefulWidget {
   RecordingScreenState createState() => RecordingScreenState();
 }
 
-class RecordingScreenState extends State<RecordingScreen> with SingleTickerProviderStateMixin {
+class RecordingScreenState extends State<RecordingScreen> with TickerProviderStateMixin, ScreenAnimationMixin {
   final FlutterSoundRecorder _audioRecorder = FlutterSoundRecorder();
   final FlutterSoundPlayer _audioPlayer = FlutterSoundPlayer();
+  
+  // Animation variables for staggered animations
+  late Animation<double> _headerAnimation;
+  late Animation<double> _audioVisualizerAnimation;
+  late Animation<double> _controlsAnimation;
+  late Animation<double> _recentRecordingsAnimation;
   
   bool _isRecording = false;
   bool _isPaused = false;
@@ -50,12 +57,15 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
   Timer? _timer;
   
   // Animation controllers for enhanced UX
-  late AnimationController _animationController;
+  late AnimationController _pulseAnimationController;
   late Animation<double> _pulseAnimation;
   
   final bool _isHoveringRecord = false;
   final bool _isHoveringPlay = false;
   final bool _isHoveringPause = false;
+  
+  // For hover effects
+  Map<String, bool> _hoverStates = {};
 
   @override
   void initState() {
@@ -69,18 +79,66 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
       }
     });
     
-    // Initialize animations
-    _animationController = AnimationController(
+    // Initialize screen animations
+    screenAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    
+    fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: screenAnimationController,
+        curve: Curves.easeOut,
+      ),
+    );
+    
+    // Create staggered animations
+    _headerAnimation = createStaggeredAnimation(
+      begin: 0, 
+      end: 1, 
+      startInterval: 0.0, 
+      endInterval: 0.6, 
+      curve: Curves.easeOutCubic
+    );
+    
+    _audioVisualizerAnimation = createStaggeredAnimation(
+      begin: 0, 
+      end: 1, 
+      startInterval: 0.1, 
+      endInterval: 0.7, 
+      curve: Curves.easeOutCubic
+    );
+    
+    _controlsAnimation = createStaggeredAnimation(
+      begin: 0, 
+      end: 1, 
+      startInterval: 0.2, 
+      endInterval: 0.8, 
+      curve: Curves.easeOutCubic
+    );
+    
+    _recentRecordingsAnimation = createStaggeredAnimation(
+      begin: 0, 
+      end: 1, 
+      startInterval: 0.3, 
+      endInterval: 0.9, 
+      curve: Curves.easeOutCubic
+    );
+    
+    // Initialize pulse animation
+    _pulseAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
     
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
       CurvedAnimation(
-        parent: _animationController,
+        parent: _pulseAnimationController,
         curve: Curves.easeInOut,
       ),
     );
+    
+    screenAnimationController.forward();
     
     _initRecorders();
     _loadRecentRecordings();
@@ -246,18 +304,29 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
 
     return GradientScaffold(
       appBar: AppBar(
-        title: Text(
-          "Voice & Video Recorder",
-          style: themeProvider.headlineLarge.copyWith(
-            color: Colors.white,
-            shadows: [
-              Shadow(
-                color: Colors.black.withOpacity(0.3),
-                offset: const Offset(0, 2),
-                blurRadius: 4,
+        title: AnimatedBuilder(
+          animation: screenAnimationController,
+          builder: (context, child) {
+            return Opacity(
+              opacity: _headerAnimation.value,
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1 - _headerAnimation.value)),
+                child: Text(
+                  "Voice & Video Recorder",
+                  style: themeProvider.headlineLarge.copyWith(
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withOpacity(0.3),
+                        offset: const Offset(0, 2),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ],
-          ),
+            );
+          }
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -303,30 +372,74 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
           const SizedBox(height: 20),
           
           // Audio visualizer
-          _buildAudioVisualizer(isDarkMode, themeProvider),
+          AnimatedBuilder(
+            animation: screenAnimationController,
+            builder: (context, child) {
+              return Opacity(
+                opacity: _audioVisualizerAnimation.value,
+                child: Transform.translate(
+                  offset: Offset(0, 20 * (1 - _audioVisualizerAnimation.value)),
+                  child: _buildAudioVisualizer(isDarkMode, themeProvider),
+                ),
+              );
+            }
+          ),
           
           const SizedBox(height: 16),
           
           // Recording duration
           if (_isRecording)
-            Text(
-              _formatDuration(_recordingDuration),
-              style: themeProvider.displayLarge.copyWith(
-                fontWeight: FontWeight.bold,
-                color: _isPaused ? themeProvider.secondaryTextColor : themeProvider.primaryTextColor,
-              ),
+            AnimatedBuilder(
+              animation: screenAnimationController,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _audioVisualizerAnimation.value,
+                  child: Transform.translate(
+                    offset: Offset(0, 20 * (1 - _audioVisualizerAnimation.value)),
+                    child: Text(
+                      _formatDuration(_recordingDuration),
+                      style: themeProvider.displayLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: _isPaused ? themeProvider.secondaryTextColor : themeProvider.primaryTextColor,
+                      ),
+                    ),
+                  ),
+                );
+              }
             ),
             
           const SizedBox(height: 24),
           
           // Recording controls
-          _buildRecordingControls(isDarkMode, themeProvider),
+          AnimatedBuilder(
+            animation: screenAnimationController,
+            builder: (context, child) {
+              return Opacity(
+                opacity: _controlsAnimation.value,
+                child: Transform.translate(
+                  offset: Offset(0, 20 * (1 - _controlsAnimation.value)),
+                  child: _buildRecordingControls(isDarkMode, themeProvider),
+                ),
+              );
+            },
+          ),
           
           const SizedBox(height: 40),
           
           // Recent recordings
           Expanded(
-            child: _buildRecentRecordings(isDarkMode, themeProvider),
+            child: AnimatedBuilder(
+              animation: screenAnimationController,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _recentRecordingsAnimation.value,
+                  child: Transform.translate(
+                    offset: Offset(0, 20 * (1 - _recentRecordingsAnimation.value)),
+                    child: _buildRecentRecordings(isDarkMode, themeProvider),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -341,100 +454,133 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
           const SizedBox(height: 20),
           
           // Video preview with enhanced styling
-          Container(
-            height: 220,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: isDarkMode ? Colors.black26 : Colors.white.withOpacity(0.8),
-              borderRadius: BorderRadius.circular(themeProvider.borderRadius),
-              border: Border.all(
-                color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
-                  spreadRadius: 1,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: _videoFile != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(themeProvider.borderRadius),
-                    child: Image.asset(
-                      'assets/video_thumbnail.png',
-                      fit: BoxFit.cover,
-                    ),
-                  )
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.videocam_outlined,
-                        size: 64,
-                        color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400,
+          AnimatedBuilder(
+            animation: screenAnimationController,
+            builder: (context, child) {
+              return Opacity(
+                opacity: _audioVisualizerAnimation.value,
+                child: Transform.translate(
+                  offset: Offset(0, 20 * (1 - _audioVisualizerAnimation.value)),
+                  child: Container(
+                    height: 220,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: isDarkMode ? Colors.black26 : Colors.white.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                      border: Border.all(
+                        color: isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300,
+                        width: 1,
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Tap the button below to start recording',
-                        style: themeProvider.bodyLarge.copyWith(
-                          color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          spreadRadius: 1,
+                          offset: const Offset(0, 2),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                    child: _videoFile != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                            child: Image.asset(
+                              'assets/video_thumbnail.png',
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.videocam_outlined,
+                                size: 64,
+                                color: isDarkMode ? Colors.grey.shade600 : Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Tap the button below to start recording',
+                                style: themeProvider.bodyLarge.copyWith(
+                                  color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
                   ),
+                ),
+              );
+            }
           ),
           
           const SizedBox(height: 32),
           
           // Video recording button with enhanced styling and animations
-          ScaleTransition(
-            scale: _pulseAnimation,
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: themeProvider.errorColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: themeProvider.errorColor.withOpacity(0.3),
-                    blurRadius: 8,
-                    spreadRadius: 2,
+          AnimatedBuilder(
+            animation: screenAnimationController,
+            builder: (context, child) {
+              return Opacity(
+                opacity: _controlsAnimation.value,
+                child: Transform.translate(
+                  offset: Offset(0, 20 * (1 - _controlsAnimation.value)),
+                  child: ScaleTransition(
+                    scale: _pulseAnimation,
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: themeProvider.errorColor,
+                        boxShadow: [
+                          BoxShadow(
+                            color: themeProvider.errorColor.withOpacity(0.3),
+                            blurRadius: 8,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.redAccent,
+                            Colors.red.shade900,
+                          ],
+                        ),
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          onTap: _pickVideo,
+                          customBorder: const CircleBorder(),
+                          child: const Icon(
+                            Icons.videocam,
+                            color: Colors.white,
+                            size: 40,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ],
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.redAccent,
-                    Colors.red.shade900,
-                  ],
                 ),
-              ),
-              child: Material(
-                color: Colors.transparent,
-                shape: const CircleBorder(),
-                child: InkWell(
-                  onTap: _pickVideo,
-                  customBorder: const CircleBorder(),
-                  child: const Icon(
-                    Icons.videocam,
-                    color: Colors.white,
-                    size: 40,
-                  ),
-                ),
-              ),
-            ),
+              );
+            }
           ),
           
           const SizedBox(height: 40),
           
           // Recent video recordings with theme styling
           Expanded(
-            child: _buildRecentRecordings(isDarkMode, themeProvider, audioOnly: false),
+            child: AnimatedBuilder(
+              animation: screenAnimationController,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _recentRecordingsAnimation.value,
+                  child: Transform.translate(
+                    offset: Offset(0, 20 * (1 - _recentRecordingsAnimation.value)),
+                    child: _buildRecentRecordings(isDarkMode, themeProvider, audioOnly: false),
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -719,13 +865,54 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
 
   @override
   void dispose() {
-    _timer?.cancel();
-    _audioRecorder.closeRecorder();
-    _audioPlayer.closePlayer();
-    _recorderController?.dispose();
-    _playerController?.dispose();
-    _tabController.dispose();
-    _animationController.dispose();
+    // Safely close audio recorder and player
+    try {
+      _audioRecorder.closeRecorder();
+    } catch (e) {
+      print('Error closing recorder: $e');
+    }
+    
+    try {
+      _audioPlayer.closePlayer();
+    } catch (e) {
+      print('Error closing player: $e');
+    }
+    
+    // Safely dispose controllers
+    try {
+      _recorderController?.dispose();
+    } catch (e) {
+      print('Error disposing recorder controller: $e');
+    }
+    
+    try {
+      _playerController?.dispose();
+    } catch (e) {
+      print('Error disposing player controller: $e');
+    }
+    
+    try {
+      _tabController.dispose();
+    } catch (e) {
+      print('Error disposing tab controller: $e');
+    }
+    
+    try {
+      _pulseAnimationController.dispose();
+    } catch (e) {
+      print('Error disposing pulse animation controller: $e');
+    }
+    
+    // Stop animation controller if it's still running
+    try {
+      if (screenAnimationController.isAnimating) {
+        screenAnimationController.stop();
+      }
+      // Don't dispose screenAnimationController as it's handled by the mixin
+    } catch (e) {
+      print('Error stopping screen animation controller: $e');
+    }
+    
     super.dispose();
   }
 
@@ -881,82 +1068,164 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
   }
 
   Widget _buildRecordingItem(RecordingFile recording, bool isDarkMode, ThemeProvider themeProvider) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(themeProvider.borderRadius),
-      ),
-      elevation: 2,
-      color: isDarkMode ? Colors.grey.shade900.withOpacity(0.7) : Colors.white,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: recording.isAudio 
-                ? themeProvider.accentColor.withOpacity(0.2) 
-                : Colors.redAccent.withOpacity(0.2),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hoverStates[recording.name] = true),
+      onExit: (_) => setState(() => _hoverStates[recording.name] = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: _hoverStates[recording.name] == true
+                ? isDarkMode
+                    ? [
+                        themeProvider.accentColor.withOpacity(0.15),
+                        themeProvider.accentColor.withOpacity(0.05),
+                      ]
+                    : [
+                        themeProvider.accentColor.withOpacity(0.15),
+                        themeProvider.accentColor.withOpacity(0.05),
+                      ]
+                : isDarkMode
+                    ? [
+                        Colors.grey.shade900.withOpacity(0.7),
+                        Colors.grey.shade900.withOpacity(0.5),
+                      ]
+                    : [
+                        Colors.white,
+                        Colors.white.withOpacity(0.9),
+                      ],
           ),
-          child: Icon(
-            recording.isAudio ? Icons.mic : Icons.videocam,
-            color: recording.isAudio ? themeProvider.accentColor : Colors.redAccent,
-          ),
-        ),
-        title: Text(
-          recording.displayName,
-          style: themeProvider.titleMedium,
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(
-              DateFormat('MMM d, y HH:mm').format(recording.date),
-              style: themeProvider.bodySmall,
-            ),
-            if (_isPlaying && _audioFilePath == recording.file.path && recording.isAudio)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: LinearProgressIndicator(
-                  backgroundColor: themeProvider.accentColor.withOpacity(0.2),
-                  valueColor: AlwaysStoppedAnimation<Color>(themeProvider.accentColor),
-                ),
-              ),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (recording.isAudio)
-              IconButton(
-                icon: Icon(
-                  _isPlaying && _audioFilePath == recording.file.path
-                      ? Icons.stop
-                      : Icons.play_arrow,
-                  color: themeProvider.secondaryIconColor,
-                ),
-                onPressed: () => _playAudio(recording.file.path),
-              ),
-            IconButton(
-              icon: Icon(
-                Icons.more_vert,
-                color: themeProvider.secondaryIconColor,
-              ),
-              onPressed: () => _showRecordingOptions(recording, themeProvider),
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+          boxShadow: [
+            BoxShadow(
+              color: _hoverStates[recording.name] == true
+                  ? themeProvider.accentColor.withOpacity(0.1)
+                  : Colors.black.withOpacity(0.05),
+              blurRadius: _hoverStates[recording.name] == true ? 8 : 5,
+              spreadRadius: _hoverStates[recording.name] == true ? 1 : 0,
+              offset: const Offset(0, 2),
             ),
           ],
+          border: Border.all(
+            color: _hoverStates[recording.name] == true
+                ? themeProvider.accentColor.withOpacity(0.3)
+                : Colors.transparent,
+            width: 1,
+          ),
         ),
-        onTap: recording.isAudio
-            ? () => _playAudio(recording.file.path)
-            : () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => VideoPlaybackScreen(
-                      videoFile: recording.file,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+            onTap: recording.isAudio
+                ? () => _playAudio(recording.file.path)
+                : () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => VideoPlaybackScreen(
+                          videoFile: recording.file,
+                        ),
+                      ),
+                    ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: recording.isAudio
+                            ? [
+                                themeProvider.accentColor.withOpacity(0.2),
+                                themeProvider.accentColor.withOpacity(0.1),
+                              ]
+                            : [
+                                Colors.redAccent.withOpacity(0.2),
+                                Colors.redAccent.withOpacity(0.1),
+                              ],
+                      ),
+                      borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (recording.isAudio ? themeProvider.accentColor : Colors.redAccent).withOpacity(0.1),
+                          blurRadius: 4,
+                          spreadRadius: 0,
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      recording.isAudio ? Icons.mic : Icons.videocam,
+                      color: recording.isAudio ? themeProvider.accentColor : Colors.redAccent,
+                      size: 22,
                     ),
                   ),
-                ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          recording.displayName,
+                          style: themeProvider.titleMedium.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: themeProvider.primaryTextColor,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          DateFormat('MMM d, y HH:mm').format(recording.date),
+                          style: themeProvider.bodySmall.copyWith(
+                            color: themeProvider.secondaryTextColor,
+                          ),
+                        ),
+                        if (_isPlaying && _audioFilePath == recording.file.path && recording.isAudio)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: LinearProgressIndicator(
+                              backgroundColor: themeProvider.accentColor.withOpacity(0.2),
+                              valueColor: AlwaysStoppedAnimation<Color>(themeProvider.accentColor),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (recording.isAudio)
+                        IconButton(
+                          icon: Icon(
+                            _isPlaying && _audioFilePath == recording.file.path
+                                ? Icons.stop
+                                : Icons.play_arrow,
+                            color: _hoverStates[recording.name] == true
+                                ? themeProvider.accentColor
+                                : themeProvider.secondaryIconColor,
+                          ),
+                          onPressed: () => _playAudio(recording.file.path),
+                        ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.more_vert,
+                          color: _hoverStates[recording.name] == true
+                              ? themeProvider.accentColor
+                              : themeProvider.secondaryIconColor,
+                        ),
+                        onPressed: () => _showRecordingOptions(recording, themeProvider),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1137,26 +1406,11 @@ class RecordingScreenState extends State<RecordingScreen> with SingleTickerProvi
           ElevatedButton(
             onPressed: () async {
               try {
-                Navigator.pop(context);
                 await recording.file.delete();
-                
-                // If the file we're deleting is the current audio file
-                if (_audioFilePath == recording.file.path) {
-                  if (_isPlaying) {
-                    await _audioPlayer.stopPlayer();
-                    await _playerController?.stopAllPlayers();
-                  }
-                  setState(() {
-                    _audioFilePath = null;
-                    _isPlaying = false;
-                  });
-                }
-                
-                await _loadRecentRecordings();
-                
+                _loadRecentRecordings();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text('Recording deleted'),
                       behavior: SnackBarBehavior.floating,
                     ),

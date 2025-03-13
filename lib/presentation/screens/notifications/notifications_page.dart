@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/gradient_scaffold.dart';
+import '../../widgets/base_screen.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -10,7 +11,14 @@ class NotificationsPage extends StatefulWidget {
   _NotificationsPageState createState() => _NotificationsPageState();
 }
 
-class _NotificationsPageState extends State<NotificationsPage> with SingleTickerProviderStateMixin {
+class _NotificationsPageState extends State<NotificationsPage> with TickerProviderStateMixin, ScreenAnimationMixin {
+  // Animation variables for staggered animations
+  late Animation<double> _headerAnimation;
+  late Animation<double> _warningAnimation;
+  late Animation<double> _tabsAnimation;
+  late Animation<double> _contentAnimation;
+  late Animation<double> _bottomBarAnimation;
+  
   // Grouped notification settings
   Map<String, Map<String, bool>> _notificationGroups = {
     'General': {
@@ -58,9 +66,7 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
   bool showConfirmation = false;
   
   // Animation controllers
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+  late AnimationController _expandAnimationController;
   
   // Track expanded categories
   final Set<String> _expandedCategories = {'General', 'App', 'Content'};
@@ -69,28 +75,73 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
   final int _selectedTab = 0;
   final List<String> _tabs = ['All', 'Messages', 'Transcriptions', 'Updates'];
   
+  // For hover effects
+  Map<String, bool> _hoverStates = {};
+  
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
+    
+    // Initialize screen animations
+    screenAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
     
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeIn,
+    fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: screenAnimationController,
+        curve: Curves.easeOut,
+      ),
     );
     
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    // Create staggered animations
+    _headerAnimation = createStaggeredAnimation(
+      begin: 0, 
+      end: 1, 
+      startInterval: 0.0, 
+      endInterval: 0.6, 
+      curve: Curves.easeOutCubic
+    );
     
-    _animationController.forward();
+    _warningAnimation = createStaggeredAnimation(
+      begin: 0, 
+      end: 1, 
+      startInterval: 0.1, 
+      endInterval: 0.7, 
+      curve: Curves.easeOutCubic
+    );
+    
+    _tabsAnimation = createStaggeredAnimation(
+      begin: 0, 
+      end: 1, 
+      startInterval: 0.2, 
+      endInterval: 0.8, 
+      curve: Curves.easeOutCubic
+    );
+    
+    _contentAnimation = createStaggeredAnimation(
+      begin: 0, 
+      end: 1, 
+      startInterval: 0.3, 
+      endInterval: 0.9, 
+      curve: Curves.easeOutCubic
+    );
+    
+    _bottomBarAnimation = createStaggeredAnimation(
+      begin: 0, 
+      end: 1, 
+      startInterval: 0.4, 
+      endInterval: 1.0, 
+      curve: Curves.easeOutCubic
+    );
+    
+    _expandAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    
+    screenAnimationController.forward();
     
     // Simulate loading saved preferences
     _loadSavedPreferences();
@@ -98,7 +149,8 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
   
   @override
   void dispose() {
-    _animationController.dispose();
+    _expandAnimationController.dispose();
+    screenAnimationController.dispose();
     super.dispose();
   }
   
@@ -238,9 +290,20 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
       onWillPop: _onWillPop,
       child: GradientScaffold(
         appBar: AppBar(
-          title: Text(
-            'Notifications & Reminders',
-            style: themeProvider.settingsHeaderStyle,
+          title: AnimatedBuilder(
+            animation: screenAnimationController,
+            builder: (context, child) {
+              return Opacity(
+                opacity: _headerAnimation.value,
+                child: Transform.translate(
+                  offset: Offset(0, 20 * (1 - _headerAnimation.value)),
+                  child: Text(
+                    'Notifications & Reminders',
+                    style: themeProvider.settingsHeaderStyle,
+                  ),
+                ),
+              );
+            }
           ),
           leading: IconButton(
             icon: Icon(Icons.arrow_back, color: themeProvider.primaryIconColor),
@@ -253,260 +316,369 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
           backgroundColor: Colors.transparent,
           elevation: 0,
         ),
-        body: FadeTransition(
-          opacity: _fadeAnimation,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Warning banner
-              Container(
-                margin: const EdgeInsets.all(16.0),
-                padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(themeProvider.borderRadius),
-                  border: Border.all(
-                    color: Colors.blue.withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.info_outline,
-                      color: Colors.blue,
-                      size: 24,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Customize how and when you receive notifications from CAIPO.',
-                        style: themeProvider.bodyMedium.copyWith(
-                          color: Colors.blue.shade800,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Notification settings in a scrollable list
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  children: [
-                    _buildCategoryHeader('General Notifications', isDarkMode, themeProvider),
-                    _buildAnimatedSwitchTile(
-                      title: 'Push Notifications',
-                      description: 'Receive notifications directly to your device.',
-                      icon: Icons.notifications_active,
-                      value: _notificationGroups['General']!['Push Notifications']!,
-                      isDarkMode: isDarkMode,
-                      themeProvider: themeProvider,
-                      onChanged: (val) => _updateSetting('General', 'Push Notifications', val),
-                    ),
-                    _buildAnimatedSwitchTile(
-                      title: 'Email Notifications',
-                      description: 'Receive notifications via email.',
-                      icon: Icons.email,
-                      value: _notificationGroups['General']!['Email Notifications']!,
-                      isDarkMode: isDarkMode,
-                      themeProvider: themeProvider,
-                      onChanged: (val) => _updateSetting('General', 'Email Notifications', val),
-                    ),
-                    
-                    _buildCategoryHeader('App Notifications', isDarkMode, themeProvider),
-                    _buildAnimatedSwitchTile(
-                      title: 'Reminders',
-                      description: 'Get reminded about pending tasks and actions.',
-                      icon: Icons.access_time,
-                      value: _notificationGroups['App']!['Reminders']!,
-                      isDarkMode: isDarkMode,
-                      themeProvider: themeProvider,
-                      onChanged: (val) => _updateSetting('App', 'Reminders', val),
-                    ),
-                    _buildAnimatedSwitchTile(
-                      title: 'Weekly Reports',
-                      description: 'Receive a summary of your activity every week.',
-                      icon: Icons.summarize,
-                      value: _notificationGroups['App']!['Weekly Reports']!,
-                      isDarkMode: isDarkMode,
-                      themeProvider: themeProvider,
-                      onChanged: (val) => _updateSetting('App', 'Weekly Reports', val),
-                    ),
-                    
-                    _buildCategoryHeader('Content Notifications', isDarkMode, themeProvider),
-                    _buildAnimatedSwitchTile(
-                      title: 'App Updates',
-                      description: 'Be notified when new features are available.',
-                      icon: Icons.system_update,
-                      value: _notificationGroups['Content']!['App Updates']!,
-                      isDarkMode: isDarkMode,
-                      themeProvider: themeProvider,
-                      onChanged: (val) => _updateSetting('Content', 'App Updates', val),
-                    ),
-                    _buildAnimatedSwitchTile(
-                      title: 'Transcription Alerts',
-                      description: 'Get notified when your transcriptions are ready.',
-                      icon: Icons.record_voice_over,
-                      value: _notificationGroups['Content']!['Transcription Alerts']!,
-                      isDarkMode: isDarkMode,
-                      themeProvider: themeProvider,
-                      onChanged: (val) => _updateSetting('Content', 'Transcription Alerts', val),
-                    ),
-                    
-                    // Notification time preferences
-                    if (_notificationGroups['General']!['Push Notifications']! || _notificationGroups['General']!['Email Notifications']!) ...[
-                      _buildCategoryHeader('Notification Time', isDarkMode, themeProvider),
-                      _buildTimePreferences(isDarkMode, themeProvider),
-                    ],
-                    
-                    const SizedBox(height: 16),
-                    
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                        'You can change these settings at any time. Some platform-specific notification settings may also need to be configured in your device settings.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDarkMode ? Colors.grey.shade400 : Colors.white70,
-                          fontStyle: FontStyle.italic,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-              
-              // Save button and confirmation at bottom
-              Container(
-                padding: const EdgeInsets.all(16.0),
-                decoration: themeProvider.settingsBottomBarDecoration,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Success confirmation
-                    AnimatedCrossFade(
-                      firstChild: Container(
-                        margin: const EdgeInsets.only(bottom: 12.0),
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8.0, horizontal: 16.0
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Colors.green.withOpacity(0.3),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(
-                              Icons.check_circle,
-                              color: Colors.green,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Notification settings saved!',
-                              style: themeProvider.bodyMedium.copyWith(
-                                color: Colors.green,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Warning banner
+            AnimatedBuilder(
+              animation: screenAnimationController,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _warningAnimation.value,
+                  child: Transform.translate(
+                    offset: Offset(0, 20 * (1 - _warningAnimation.value)),
+                    child: Container(
+                      margin: const EdgeInsets.all(16.0),
+                      padding: const EdgeInsets.all(16.0),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.blue.withOpacity(0.1),
+                            Colors.blue.withOpacity(0.2),
                           ],
                         ),
+                        borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                        border: Border.all(
+                          color: Colors.blue.withOpacity(0.3),
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.blue.withOpacity(0.05),
+                            blurRadius: 10,
+                            spreadRadius: 0,
+                          ),
+                        ],
                       ),
-                      secondChild: const SizedBox(height: 36),
-                      crossFadeState: showConfirmation 
-                          ? CrossFadeState.showFirst
-                          : CrossFadeState.showSecond,
-                      duration: const Duration(milliseconds: 300),
-                    ),
-                    
-                    // Action buttons
-                    Row(
-                      children: [
-                        // Reset button
-                        TextButton.icon(
-                          onPressed: haveUnsavedChanges
-                              ? () => _showResetConfirmation(themeProvider)
-                              : null,
-                          icon: Icon(
-                            Icons.refresh,
-                            size: 18,
-                            color: Colors.red,
-                          ),
-                          label: Text(
-                            'Reset',
-                            style: themeProvider.bodyMedium.copyWith(
-                              color: Colors.red,
-                            ),
-                          ),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                          ),
-                        ),
-                        
-                        const SizedBox(width: 8),
-                        
-                        // Save button
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: haveUnsavedChanges ? _savePreferences : null,
-                            icon: const Icon(Icons.save),
-                            label: const Text('Save Preferences'),
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Colors.blue.withOpacity(0.2),
+                                  Colors.blue.withOpacity(0.1),
+                                ],
                               ),
-                              backgroundColor: themeProvider.accentColor,
-                              disabledBackgroundColor: themeProvider.accentColor.withOpacity(0.5),
-                              elevation: 0,
+                              borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                            ),
+                            child: Icon(
+                              Icons.info_outline,
+                              color: Colors.blue,
+                              size: 24,
                             ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Customize how and when you receive notifications from CAIPO.',
+                              style: themeProvider.bodyMedium.copyWith(
+                                color: isDarkMode ? Colors.blue.shade300 : Colors.blue.shade800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
-                ),
+                  ),
+                );
+              }
+            ),
+            
+            // Notification settings in a scrollable list
+            Expanded(
+              child: AnimatedBuilder(
+                animation: screenAnimationController,
+                builder: (context, child) {
+                  return Opacity(
+                    opacity: _contentAnimation.value,
+                    child: Transform.translate(
+                      offset: Offset(0, 20 * (1 - _contentAnimation.value)),
+                      child: ListView(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        children: [
+                          _buildCategoryHeader('General Notifications', isDarkMode, themeProvider),
+                          _buildAnimatedSwitchTile(
+                            title: 'Push Notifications',
+                            description: 'Receive notifications directly to your device.',
+                            icon: Icons.notifications_active,
+                            value: _notificationGroups['General']!['Push Notifications']!,
+                            isDarkMode: isDarkMode,
+                            themeProvider: themeProvider,
+                            onChanged: (val) => _updateSetting('General', 'Push Notifications', val),
+                          ),
+                          _buildAnimatedSwitchTile(
+                            title: 'Email Notifications',
+                            description: 'Receive notifications via email.',
+                            icon: Icons.email,
+                            value: _notificationGroups['General']!['Email Notifications']!,
+                            isDarkMode: isDarkMode,
+                            themeProvider: themeProvider,
+                            onChanged: (val) => _updateSetting('General', 'Email Notifications', val),
+                          ),
+                          
+                          _buildCategoryHeader('App Notifications', isDarkMode, themeProvider),
+                          _buildAnimatedSwitchTile(
+                            title: 'Reminders',
+                            description: 'Get reminded about pending tasks and actions.',
+                            icon: Icons.access_time,
+                            value: _notificationGroups['App']!['Reminders']!,
+                            isDarkMode: isDarkMode,
+                            themeProvider: themeProvider,
+                            onChanged: (val) => _updateSetting('App', 'Reminders', val),
+                          ),
+                          _buildAnimatedSwitchTile(
+                            title: 'Weekly Reports',
+                            description: 'Receive a summary of your activity every week.',
+                            icon: Icons.summarize,
+                            value: _notificationGroups['App']!['Weekly Reports']!,
+                            isDarkMode: isDarkMode,
+                            themeProvider: themeProvider,
+                            onChanged: (val) => _updateSetting('App', 'Weekly Reports', val),
+                          ),
+                          
+                          _buildCategoryHeader('Content Notifications', isDarkMode, themeProvider),
+                          _buildAnimatedSwitchTile(
+                            title: 'App Updates',
+                            description: 'Be notified when new features are available.',
+                            icon: Icons.system_update,
+                            value: _notificationGroups['Content']!['App Updates']!,
+                            isDarkMode: isDarkMode,
+                            themeProvider: themeProvider,
+                            onChanged: (val) => _updateSetting('Content', 'App Updates', val),
+                          ),
+                          _buildAnimatedSwitchTile(
+                            title: 'Transcription Alerts',
+                            description: 'Get notified when your transcriptions are ready.',
+                            icon: Icons.record_voice_over,
+                            value: _notificationGroups['Content']!['Transcription Alerts']!,
+                            isDarkMode: isDarkMode,
+                            themeProvider: themeProvider,
+                            onChanged: (val) => _updateSetting('Content', 'Transcription Alerts', val),
+                          ),
+                          
+                          // Notification time preferences
+                          if (_notificationGroups['General']!['Push Notifications']! || _notificationGroups['General']!['Email Notifications']!) ...[
+                            _buildCategoryHeader('Notification Time', isDarkMode, themeProvider),
+                            _buildTimePreferences(isDarkMode, themeProvider),
+                          ],
+                          
+                          const SizedBox(height: 16),
+                          
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(
+                              'You can change these settings at any time. Some platform-specific notification settings may also need to be configured in your device settings.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDarkMode ? Colors.grey.shade400 : Colors.white70,
+                                fontStyle: FontStyle.italic,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+                    ),
+                  );
+                }
               ),
-            ],
-          ),
+            ),
+            
+            // Save button and confirmation at bottom
+            AnimatedBuilder(
+              animation: screenAnimationController,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _bottomBarAnimation.value,
+                  child: Transform.translate(
+                    offset: Offset(0, 20 * (1 - _bottomBarAnimation.value)),
+                    child: Container(
+                      padding: const EdgeInsets.all(16.0),
+                      decoration: themeProvider.settingsBottomBarDecoration,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Success confirmation
+                          AnimatedCrossFade(
+                            firstChild: Container(
+                              margin: const EdgeInsets.only(bottom: 12.0),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8.0, horizontal: 16.0
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: Colors.green.withOpacity(0.3),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Notification settings saved!',
+                                    style: themeProvider.bodyMedium.copyWith(
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            secondChild: const SizedBox(height: 36),
+                            crossFadeState: showConfirmation 
+                                ? CrossFadeState.showFirst
+                                : CrossFadeState.showSecond,
+                            duration: const Duration(milliseconds: 300),
+                          ),
+                          
+                          // Action buttons
+                          Row(
+                            children: [
+                              // Reset button
+                              TextButton.icon(
+                                onPressed: haveUnsavedChanges
+                                    ? () => _showResetConfirmation(themeProvider)
+                                    : null,
+                                icon: Icon(
+                                  Icons.refresh,
+                                  size: 18,
+                                  color: Colors.red,
+                                ),
+                                label: Text(
+                                  'Reset',
+                                  style: themeProvider.bodyMedium.copyWith(
+                                    color: Colors.red,
+                                  ),
+                                ),
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
+                                ),
+                              ),
+                              
+                              const SizedBox(width: 8),
+                              
+                              // Save button
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: haveUnsavedChanges ? _savePreferences : null,
+                                  icon: const Icon(Icons.save),
+                                  label: const Text('Save Preferences'),
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                                    ),
+                                    backgroundColor: themeProvider.accentColor,
+                                    disabledBackgroundColor: themeProvider.accentColor.withOpacity(0.5),
+                                    elevation: 0,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+            ),
+          ],
         ),
       ),
     );
   }
   
   Widget _buildCategoryHeader(String title, bool isDarkMode, ThemeProvider themeProvider) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 12.0),
-      margin: const EdgeInsets.only(bottom: 8.0),
-      decoration: themeProvider.settingsHeaderDecoration,
-      child: Row(
-        children: [
-          Icon(
-            _getCategoryIcon(title),
-            color: themeProvider.accentColor,
-            size: 24,
-          ),
-          const SizedBox(width: 12),
-          Text(
-            title,
-            style: themeProvider.settingsHeaderStyle.copyWith(
-              color: isDarkMode ? Colors.white : Colors.black87,
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 10 * (1 - value)),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 12.0),
+              margin: const EdgeInsets.only(bottom: 8.0),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDarkMode
+                      ? [
+                          themeProvider.accentColor.withOpacity(0.15),
+                          themeProvider.accentColor.withOpacity(0.05),
+                        ]
+                      : [
+                          themeProvider.accentColor.withOpacity(0.15),
+                          themeProvider.accentColor.withOpacity(0.05),
+                        ],
+                ),
+                borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                boxShadow: [
+                  BoxShadow(
+                    color: themeProvider.accentColor.withOpacity(0.05),
+                    blurRadius: 10,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          themeProvider.accentColor.withOpacity(0.2),
+                          themeProvider.accentColor.withOpacity(0.1),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                    ),
+                    child: Icon(
+                      _getCategoryIcon(title),
+                      color: themeProvider.accentColor,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    title,
+                    style: themeProvider.titleMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: themeProvider.primaryTextColor,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
   
@@ -533,48 +705,155 @@ class _NotificationsPageState extends State<NotificationsPage> with SingleTicker
     required bool isDarkMode,
     required ThemeProvider themeProvider,
     required ValueChanged<bool> onChanged,
+    bool requiresRestart = false,
   }) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0.8, end: 1.0),
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeOutBack,
-      builder: (context, scale, child) {
-        return Transform.scale(
-          scale: scale,
-          child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 6.0),
-            decoration: themeProvider.settingsCardDecoration,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-              child: ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: themeProvider.getSettingsIconDecoration(isActive: value),
-                  child: Icon(
-                    icon,
-                    color: value ? themeProvider.accentColor : themeProvider.secondaryIconColor,
-                    size: 24,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hoverStates[title] = true),
+      onExit: (_) => setState(() => _hoverStates[title] = false),
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0.8, end: 1.0),
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOutBack,
+        builder: (context, scale, child) {
+          final isHovered = _hoverStates[title] == true;
+          
+          return Transform.scale(
+            scale: scale,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.symmetric(vertical: 6.0),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isHovered
+                      ? isDarkMode
+                          ? [
+                              themeProvider.accentColor.withOpacity(0.15),
+                              themeProvider.accentColor.withOpacity(0.05),
+                            ]
+                          : [
+                              themeProvider.accentColor.withOpacity(0.15),
+                              themeProvider.accentColor.withOpacity(0.05),
+                            ]
+                      : isDarkMode
+                          ? [
+                              themeProvider.backgroundColor.withOpacity(0.8),
+                              themeProvider.backgroundColor.withOpacity(0.6),
+                            ]
+                          : [
+                              Colors.white.withOpacity(0.9),
+                              Colors.white.withOpacity(0.7),
+                            ],
+                ),
+                borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                boxShadow: [
+                  BoxShadow(
+                    color: isHovered
+                        ? themeProvider.accentColor.withOpacity(0.1)
+                        : Colors.black.withOpacity(0.05),
+                    blurRadius: isHovered ? 8 : 5,
+                    spreadRadius: isHovered ? 1 : 0,
+                    offset: const Offset(0, 2),
                   ),
+                ],
+                border: Border.all(
+                  color: isHovered
+                      ? themeProvider.accentColor.withOpacity(0.3)
+                      : Colors.transparent,
+                  width: 1,
                 ),
-                title: Text(
-                  title, 
-                  style: themeProvider.settingsTitleStyle,
-                ),
-                subtitle: Text(
-                  description, 
-                  style: themeProvider.settingsDescriptionStyle,
-                ),
-                trailing: Switch(
-                  value: value,
-                  onChanged: onChanged,
-                  activeColor: themeProvider.accentColor,
-                  activeTrackColor: themeProvider.accentColor.withOpacity(0.3),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: value
+                                  ? [
+                                      themeProvider.accentColor.withOpacity(0.2),
+                                      themeProvider.accentColor.withOpacity(0.1),
+                                    ]
+                                  : [
+                                      Colors.grey.withOpacity(0.2),
+                                      Colors.grey.withOpacity(0.1),
+                                    ],
+                            ),
+                            borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                          ),
+                          child: Icon(
+                            icon,
+                            color: value ? themeProvider.accentColor : themeProvider.secondaryIconColor,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title, 
+                                style: themeProvider.titleMedium.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: themeProvider.primaryTextColor,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                description, 
+                                style: themeProvider.bodySmall.copyWith(
+                                  color: themeProvider.secondaryTextColor,
+                                ),
+                              ),
+                              if (requiresRestart) ...[
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.refresh,
+                                      size: 14,
+                                      color: themeProvider.accentColor,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Requires restart',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontStyle: FontStyle.italic,
+                                        color: themeProvider.accentColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        Switch.adaptive(
+                          value: value,
+                          onChanged: onChanged,
+                          activeColor: themeProvider.accentColor,
+                          activeTrackColor: themeProvider.accentColor.withOpacity(0.3),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
   

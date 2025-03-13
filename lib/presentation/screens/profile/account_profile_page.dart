@@ -15,7 +15,7 @@ class AccountProfilePage extends StatefulWidget {
   _AccountProfilePageState createState() => _AccountProfilePageState();
 }
 
-class _AccountProfilePageState extends State<AccountProfilePage> with SingleTickerProviderStateMixin {
+class _AccountProfilePageState extends State<AccountProfilePage> with TickerProviderStateMixin {
   // User profile data - now initialized as null or empty
   String _username = '';
   String _userEmail = '';
@@ -185,23 +185,15 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
   
   // Save profile changes
   Future<void> _saveChanges() async {
-    // Validate inputs
-    if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Name cannot be empty'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-    
-    setState(() => _isProcessing = true);
+    setState(() {
+      _isProcessing = true;
+    });
     
     try {
-      final User? currentUser = FirebaseAuth.instance.currentUser;
+      final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
-        throw Exception('User not logged in');
+        _showErrorSnackBar('User not authenticated');
+        return;
       }
       
       // Update display name in Firebase Auth
@@ -216,62 +208,33 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
       }
       
       // Update additional data in Firestore
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser.uid)
-          .set({
-            'displayName': _nameController.text.trim(),
-            'phone': _phoneController.text.trim(),
-            'location': _locationController.text.trim(),
-            'updatedAt': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
+      final success = await FirebaseService.updateUserProfile(
+        currentUser.uid,
+        _nameController.text.trim(),
+        _phoneController.text.trim(),
+        _locationController.text.trim(),
+      );
       
-      // Update local state
-      setState(() {
-        _username = _nameController.text.trim();
-        _userPhone = _phoneController.text.trim();
-        _userLocation = _locationController.text.trim();
-      });
-      
-      // Show success message
-      if (mounted) {
-        final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                const SizedBox(width: 16),
-                const Expanded(child: Text('Profile updated successfully')),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(themeProvider.borderRadius),
-            ),
-          ),
-        );
-        
+      if (!success) {
+        // Show a warning that Firestore data wasn't saved, but Auth data was
+        _showWarningSnackBar('Profile updated in Auth but Firestore data could not be saved');
+      } else {
+        // Update local state
         setState(() {
+          _username = _nameController.text.trim();
+          _userPhone = _phoneController.text.trim();
+          _userLocation = _locationController.text.trim();
           _isEditMode = false;
         });
+        
+        _showSuccessSnackBar('Profile updated successfully');
       }
     } catch (e) {
-      // Handle error
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating profile: $e'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      _showErrorSnackBar('Error updating profile: $e');
     } finally {
-      if (mounted) {
-        setState(() => _isProcessing = false);
-      }
+      setState(() {
+        _isProcessing = false;
+      });
     }
   }
   
@@ -369,37 +332,30 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
         
         // Try to get additional data from Firestore
         try {
-          final userDoc = await FirebaseFirestore.instance
-              .collection('users')
-              .doc(currentUser.uid)
-              .get();
+          final userData = await FirebaseService.getUserData(currentUser.uid);
           
-          if (userDoc.exists) {
-            final userData = userDoc.data();
-            
-            if (userData != null) {
-              setState(() {
-                _userPhone = userData['phone'] ?? '';
-                _locationController.text = userData['location'] ?? '';
-                _phoneController.text = _userPhone;
-                _userLocation = userData['location'] ?? '';
-                
-                // Format the creation timestamp or use the provided timestamp
-                if (userData['createdAt'] != null) {
-                  final Timestamp createdAt = userData['createdAt'];
-                  final DateTime joinDateTime = createdAt.toDate();
+          if (userData != null) {
+            setState(() {
+              _userPhone = userData['phone'] ?? '';
+              _locationController.text = userData['location'] ?? '';
+              _phoneController.text = _userPhone;
+              _userLocation = userData['location'] ?? '';
+              
+              // Format the creation timestamp or use the provided timestamp
+              if (userData['createdAt'] != null) {
+                final Timestamp createdAt = userData['createdAt'];
+                final DateTime joinDateTime = createdAt.toDate();
+                _joinDate = '${_getMonthName(joinDateTime.month)} ${joinDateTime.year}';
+              } else {
+                // Use Firebase Auth's creation time as fallback
+                final DateTime? joinDateTime = currentUser.metadata.creationTime;
+                if (joinDateTime != null) {
                   _joinDate = '${_getMonthName(joinDateTime.month)} ${joinDateTime.year}';
                 } else {
-                  // Use Firebase Auth's creation time as fallback
-                  final DateTime? joinDateTime = currentUser.metadata.creationTime;
-                  if (joinDateTime != null) {
-                    _joinDate = '${_getMonthName(joinDateTime.month)} ${joinDateTime.year}';
-                  } else {
-                    _joinDate = 'Unknown';
-                  }
+                  _joinDate = 'Unknown';
                 }
-              });
-            }
+              }
+            });
           } else {
             // If user document doesn't exist yet, initialize with defaults
             // and use the Auth creation time
@@ -411,7 +367,6 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
             }
           }
         } catch (e) {
-          // Handle Firestore errors
           print('Error loading additional user data: $e');
           
           // Still use what we have from Auth
@@ -503,31 +458,59 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Warning banner
+                // Warning banner with improved design
                 Container(
                   margin: const EdgeInsets.only(bottom: 16.0),
                   padding: const EdgeInsets.all(16.0),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.blue.withOpacity(0.1),
+                        Colors.blue.withOpacity(0.2),
+                      ],
+                    ),
                     borderRadius: BorderRadius.circular(themeProvider.borderRadius),
                     border: Border.all(
                       color: Colors.blue.withOpacity(0.3),
                       width: 1,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.blue.withOpacity(0.05),
+                        blurRadius: 10,
+                        spreadRadius: 0,
+                      ),
+                    ],
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: Colors.blue,
-                        size: 24,
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.blue.withOpacity(0.2),
+                              Colors.blue.withOpacity(0.1),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                        ),
+                        child: Icon(
+                          Icons.info_outline,
+                          color: Colors.blue,
+                          size: 24,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           'Keep your profile information up to date to ensure the best experience.',
                           style: themeProvider.bodyMedium.copyWith(
-                            color: Colors.blue.shade800,
+                            color: isDarkMode ? Colors.blue.shade300 : Colors.blue.shade800,
                           ),
                         ),
                       ),
@@ -535,68 +518,221 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
                   ),
                 ),
                 
-                // Profile Picture Section
+                // Profile Picture Section with enhanced animations
                 Center(
-                  child: Stack(
-                    children: [
-                      // Profile picture with loading indicator
-                      Container(
-                        height: 120,
-                        width: 120,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.2),
-                            width: 4,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 10,
-                              spreadRadius: 1,
-                            ),
-                          ],
-                        ),
-                        child: _isImageLoading
-                            ? const CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent),
-                              )
-                            : CircleAvatar(
-                                radius: 58,
-                                backgroundImage: _selectedImage != null
-                                    ? FileImage(_selectedImage!) as ImageProvider
-                                    : const AssetImage('assets/profile_placeholder.png'),
-                              ),
-                      ),
-                      // Edit button on the image
-                      if (_isEditMode)
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 5,
-                                  spreadRadius: 1,
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 800),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, value, child) {
+                      return Opacity(
+                        opacity: value,
+                        child: Transform.scale(
+                          scale: 0.8 + (0.2 * value),
+                          child: Stack(
+                            children: [
+                              // Decorative background circle with gradient
+                              Container(
+                                height: 150,
+                                width: 150,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: isDarkMode
+                                        ? [
+                                            themeProvider.accentColor.withOpacity(0.3),
+                                            themeProvider.accentColor.withOpacity(0.1),
+                                          ]
+                                        : [
+                                            themeProvider.accentColor.withOpacity(0.4),
+                                            themeProvider.accentColor.withOpacity(0.2),
+                                          ],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: themeProvider.accentColor.withOpacity(0.2),
+                                      blurRadius: 15,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                            child: CircleAvatar(
-                              backgroundColor: Colors.blueAccent,
-                              radius: 20,
-                              child: IconButton(
-                                icon: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
-                                onPressed: _pickImage,
                               ),
-                            ),
+                              
+                              // Profile picture with loading indicator
+                              Container(
+                                height: 140,
+                                width: 140,
+                                margin: const EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isDarkMode
+                                        ? Colors.white.withOpacity(0.3)
+                                        : Colors.white.withOpacity(0.9),
+                                    width: 4,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 10,
+                                      spreadRadius: 1,
+                                    ),
+                                  ],
+                                ),
+                                child: _isImageLoading
+                                    ? Center(
+                                        child: SizedBox(
+                                          width: 40,
+                                          height: 40,
+                                          child: CircularProgressIndicator(
+                                            valueColor: AlwaysStoppedAnimation<Color>(themeProvider.accentColor),
+                                            strokeWidth: 3,
+                                          ),
+                                        ),
+                                      )
+                                    : ClipRRect(
+                                        borderRadius: BorderRadius.circular(70),
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: isDarkMode
+                                                ? Colors.grey.shade800
+                                                : Colors.grey.shade200,
+                                          ),
+                                          child: _selectedImage != null
+                                              ? Image.file(
+                                                  _selectedImage!,
+                                                  fit: BoxFit.cover,
+                                                  width: 140,
+                                                  height: 140,
+                                                )
+                                              : _photoURL != null
+                                                  ? Image.network(
+                                                      _photoURL!,
+                                                      fit: BoxFit.cover,
+                                                      width: 140,
+                                                      height: 140,
+                                                      loadingBuilder: (context, child, loadingProgress) {
+                                                        if (loadingProgress == null) return child;
+                                                        return Center(
+                                                          child: CircularProgressIndicator(
+                                                            value: loadingProgress.expectedTotalBytes != null
+                                                                ? loadingProgress.cumulativeBytesLoaded /
+                                                                    loadingProgress.expectedTotalBytes!
+                                                                : null,
+                                                            valueColor: AlwaysStoppedAnimation<Color>(
+                                                                themeProvider.accentColor),
+                                                            strokeWidth: 3,
+                                                          ),
+                                                        );
+                                                      },
+                                                    )
+                                                  : Image.asset(
+                                                      'assets/profile_placeholder.png',
+                                                      fit: BoxFit.cover,
+                                                      width: 140,
+                                                      height: 140,
+                                                    ),
+                                        ),
+                                      ),
+                              ),
+                              
+                              // Edit button on the image with improved styling
+                              if (_isEditMode)
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: TweenAnimationBuilder<double>(
+                                    tween: Tween<double>(begin: 0, end: 1),
+                                    duration: const Duration(milliseconds: 400),
+                                    curve: Curves.elasticOut,
+                                    builder: (context, value, child) {
+                                      return Transform.scale(
+                                        scale: value,
+                                        child: Container(
+                                          height: 40,
+                                          width: 40,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                              colors: [
+                                                themeProvider.accentColor,
+                                                themeProvider.accentColor.withOpacity(0.8),
+                                              ],
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: themeProvider.accentColor.withOpacity(0.3),
+                                                blurRadius: 8,
+                                                spreadRadius: 1,
+                                              ),
+                                            ],
+                                          ),
+                                          child: IconButton(
+                                            icon: const Icon(Icons.camera_alt, size: 20),
+                                            color: Colors.white,
+                                            padding: EdgeInsets.zero,
+                                            onPressed: _pickImage,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
-                    ],
+                      );
+                    },
                   ),
                 ),
+                
+                // Username display with verification badge
+                if (!_isEditMode && _username.isNotEmpty)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 12.0, bottom: 8.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _username,
+                            style: themeProvider.headlineMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: themeProvider.primaryTextColor,
+                            ),
+                          ),
+                          if (_isVerified)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8.0),
+                              child: Icon(
+                                Icons.verified,
+                                color: themeProvider.accentColor,
+                                size: 20,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                
+                // Email display when not in edit mode
+                if (!_isEditMode && _userEmail.isNotEmpty)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: Text(
+                        _userEmail,
+                        style: themeProvider.bodyMedium.copyWith(
+                          color: themeProvider.secondaryTextColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                
                 const SizedBox(height: 16),
                 
                 // Personal Information Section
@@ -735,24 +871,77 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
   
   Widget _buildSectionHeader(String title, bool isDarkMode) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      decoration: themeProvider.settingsHeaderDecoration,
-      child: Row(
-        children: [
-          Icon(
-            _getSectionIcon(title),
-            color: themeProvider.accentColor,
-            size: 24,
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 10 * (1 - value)),
+            child: Container(
+              padding: const EdgeInsets.all(16.0),
+              margin: const EdgeInsets.symmetric(vertical: 8.0),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDarkMode
+                      ? [
+                          themeProvider.accentColor.withOpacity(0.15),
+                          themeProvider.accentColor.withOpacity(0.05),
+                        ]
+                      : [
+                          themeProvider.accentColor.withOpacity(0.15),
+                          themeProvider.accentColor.withOpacity(0.05),
+                        ],
+                ),
+                borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                boxShadow: [
+                  BoxShadow(
+                    color: themeProvider.accentColor.withOpacity(0.05),
+                    blurRadius: 10,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          themeProvider.accentColor.withOpacity(0.2),
+                          themeProvider.accentColor.withOpacity(0.1),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                    ),
+                    child: Icon(
+                      _getSectionIcon(title),
+                      color: themeProvider.accentColor,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    title,
+                    style: themeProvider.titleMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: themeProvider.primaryTextColor,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(width: 12),
-          Text(
-            title,
-            style: themeProvider.settingsHeaderStyle,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
   
@@ -777,262 +966,437 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
     required VoidCallback onTap,
   }) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8.0),
-      decoration: themeProvider.settingsCardDecoration,
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16.0),
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: themeProvider.getSettingsIconDecoration(isActive: true),
-          child: Icon(
-            icon,
-            color: themeProvider.accentColor,
-            size: 20,
-          ),
-        ),
-        title: Text(
-          title,
-          style: themeProvider.settingsTitleStyle,
-        ),
-        subtitle: Text(
-          value,
-          style: themeProvider.settingsDescriptionStyle,
-        ),
-        trailing: Icon(
-          Icons.chevron_right,
-          color: themeProvider.secondaryIconColor,
-        ),
-        onTap: onTap,
+    final int optionIndex = _getOptionIndex(title);
+    
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hoveredOptionIndex = optionIndex),
+      onExit: (_) => setState(() => _hoveredOptionIndex = null),
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeOutCubic,
+        builder: (context, animValue, child) {
+          return Opacity(
+            opacity: animValue,
+            child: Transform.translate(
+              offset: Offset(0, 5 * (1 - animValue)),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.only(bottom: 12.0),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: _hoveredOptionIndex == optionIndex
+                        ? isDarkMode
+                            ? [
+                                themeProvider.accentColor.withOpacity(0.15),
+                                themeProvider.accentColor.withOpacity(0.05),
+                              ]
+                            : [
+                                themeProvider.accentColor.withOpacity(0.15),
+                                themeProvider.accentColor.withOpacity(0.05),
+                              ]
+                        : isDarkMode
+                            ? [
+                                themeProvider.backgroundColor,
+                                themeProvider.backgroundColor,
+                              ]
+                            : [
+                                themeProvider.backgroundColor,
+                                themeProvider.backgroundColor,
+                              ],
+                  ),
+                  borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _hoveredOptionIndex == optionIndex
+                          ? themeProvider.accentColor.withOpacity(0.1)
+                          : Colors.black.withOpacity(0.05),
+                      blurRadius: _hoveredOptionIndex == optionIndex ? 8 : 5,
+                      spreadRadius: _hoveredOptionIndex == optionIndex ? 1 : 0,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: _hoveredOptionIndex == optionIndex
+                        ? themeProvider.accentColor.withOpacity(0.3)
+                        : Colors.transparent,
+                    width: 1,
+                  ),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: onTap,
+                    borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                    splashColor: themeProvider.accentColor.withOpacity(0.1),
+                    highlightColor: themeProvider.accentColor.withOpacity(0.05),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  themeProvider.accentColor.withOpacity(0.2),
+                                  themeProvider.accentColor.withOpacity(0.1),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: themeProvider.accentColor.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  spreadRadius: 0,
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              icon,
+                              color: themeProvider.accentColor,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  style: themeProvider.titleMedium.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: themeProvider.primaryTextColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  value,
+                                  style: themeProvider.bodySmall.copyWith(
+                                    color: themeProvider.secondaryTextColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.chevron_right,
+                            color: _hoveredOptionIndex == optionIndex
+                                ? themeProvider.accentColor
+                                : themeProvider.secondaryTextColor.withOpacity(0.7),
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
+  }
+  
+  int _getOptionIndex(String title) {
+    switch (title.toLowerCase()) {
+      case 'username':
+        return 0;
+      case 'email':
+        return 1;
+      case 'phone':
+        return 2;
+      case 'location':
+        return 3;
+      case 'change password':
+        return 4;
+      case 'delete account':
+        return 5;
+      case 'help center':
+        return 6;
+      case 'privacy policy':
+        return 7;
+      default:
+        return -1;
+    }
   }
   
   Widget _buildProfileInfoSection(bool isDarkMode) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     
-    return Column(
-      children: [
-        // User name with verified badge
-        Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          elevation: isDarkMode ? 0 : 1,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          color: isDarkMode 
-              ? Colors.black.withOpacity(0.3) 
-              : Colors.white.withOpacity(0.9),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
-            child: Row(
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - value)),
+            child: Column(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
+                // User name with verified badge
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
-                    color: isDarkMode 
-                        ? Colors.blueAccent.withOpacity(0.1) 
-                        : Colors.blue.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.person,
-                    color: Colors.blueAccent,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            _username,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: themeProvider.primaryTextColor,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.verified,
-                            size: 18,
-                            color: Colors.blueAccent,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Account is verified',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: themeProvider.secondaryTextColor,
-                        ),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: isDarkMode
+                          ? [
+                              themeProvider.accentColor.withOpacity(0.15),
+                              themeProvider.accentColor.withOpacity(0.05),
+                            ]
+                          : [
+                              themeProvider.accentColor.withOpacity(0.1),
+                              themeProvider.accentColor.withOpacity(0.02),
+                            ],
+                    ),
+                    borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                    boxShadow: [
+                      BoxShadow(
+                        color: themeProvider.accentColor.withOpacity(0.05),
+                        blurRadius: 10,
+                        spreadRadius: 0,
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        
-        // Email info card
-        Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          elevation: isDarkMode ? 0 : 1,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          color: isDarkMode 
-              ? Colors.black.withOpacity(0.3) 
-              : Colors.white.withOpacity(0.9),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: isDarkMode 
-                        ? Colors.blueAccent.withOpacity(0.1) 
-                        : Colors.blue.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.email,
-                    color: Colors.blueAccent,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Email',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.blueAccent,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _userEmail,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: themeProvider.primaryTextColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-        
-        // Contact & location info card
-        Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          elevation: isDarkMode ? 0 : 1,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          color: isDarkMode 
-              ? Colors.black.withOpacity(0.3) 
-              : Colors.white.withOpacity(0.9),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                // Phone number
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: isDarkMode 
-                            ? Colors.blueAccent.withOpacity(0.1) 
-                            : Colors.blue.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.phone,
-                        color: Colors.blueAccent,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
                       children: [
-                        const Text(
-                          'Phone',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.blueAccent,
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                themeProvider.accentColor.withOpacity(0.2),
+                                themeProvider.accentColor.withOpacity(0.1),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: themeProvider.accentColor.withOpacity(0.1),
+                                blurRadius: 4,
+                                spreadRadius: 0,
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.person,
+                            color: themeProvider.accentColor,
+                            size: 22,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _userPhone,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: themeProvider.primaryTextColor,
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    _username,
+                                    style: themeProvider.titleMedium.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: themeProvider.primaryTextColor,
+                                    ),
+                                  ),
+                                  if (_isVerified) ...[
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            themeProvider.accentColor.withOpacity(0.7),
+                                            themeProvider.accentColor.withOpacity(0.5),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.verified,
+                                            size: 14,
+                                            color: Colors.white,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'Verified',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _userEmail,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: themeProvider.secondaryTextColor,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
                 
-                const SizedBox(height: 16),
+                // Phone number
+                _buildInfoItem(
+                  icon: Icons.phone,
+                  title: 'Phone',
+                  value: _userPhone.isNotEmpty ? _userPhone : 'Not provided',
+                  isDarkMode: isDarkMode,
+                ),
                 
                 // Location
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: isDarkMode 
-                            ? Colors.blueAccent.withOpacity(0.1) 
-                            : Colors.blue.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.location_on,
-                        color: Colors.blueAccent,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Location',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.blueAccent,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _userLocation,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: themeProvider.primaryTextColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                _buildInfoItem(
+                  icon: Icons.location_on,
+                  title: 'Location',
+                  value: _userLocation.isNotEmpty ? _userLocation : 'Not provided',
+                  isDarkMode: isDarkMode,
+                ),
+                
+                // Join date
+                _buildInfoItem(
+                  icon: Icons.calendar_today,
+                  title: 'Member Since',
+                  value: _joinDate,
+                  isDarkMode: isDarkMode,
                 ),
               ],
             ),
           ),
-        ),
-      ],
+        );
+      },
+    );
+  }
+  
+  Widget _buildInfoItem({
+    required IconData icon,
+    required String title,
+    required String value,
+    required bool isDarkMode,
+  }) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOutCubic,
+      builder: (context, animValue, child) {
+        return Opacity(
+          opacity: animValue,
+          child: Transform.translate(
+            offset: Offset(0, 10 * (1 - animValue)),
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDarkMode
+                      ? [
+                          themeProvider.backgroundColor.withOpacity(0.8),
+                          themeProvider.backgroundColor.withOpacity(0.6),
+                        ]
+                      : [
+                          themeProvider.backgroundColor.withOpacity(0.8),
+                          themeProvider.backgroundColor.withOpacity(0.6),
+                        ],
+                ),
+                borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 8,
+                    spreadRadius: 0,
+                  ),
+                ],
+                border: Border.all(
+                  color: themeProvider.accentColor.withOpacity(0.1),
+                  width: 1,
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            themeProvider.accentColor.withOpacity(0.15),
+                            themeProvider.accentColor.withOpacity(0.05),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                      ),
+                      child: Icon(
+                        icon,
+                        color: themeProvider.accentColor,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: themeProvider.secondaryTextColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            value,
+                            style: themeProvider.titleMedium.copyWith(
+                              fontSize: 16,
+                              color: themeProvider.primaryTextColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
   
@@ -1186,6 +1550,76 @@ class _AccountProfilePageState extends State<AccountProfilePage> with SingleTick
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // Helper methods for showing SnackBars
+  void _showSuccessSnackBar(String message) {
+    if (!mounted) return;
+    
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 16),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+        ),
+      ),
+    );
+  }
+  
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+    
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error, color: Colors.white),
+            const SizedBox(width: 16),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+        ),
+      ),
+    );
+  }
+  
+  void _showWarningSnackBar(String message) {
+    if (!mounted) return;
+    
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.warning, color: Colors.white),
+            const SizedBox(width: 16),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.orange,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
         ),
       ),
     );

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../data/services/openai_service.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/gradient_scaffold.dart';
+import '../../widgets/base_screen.dart';
 import '../../../data/services/firebase_service.dart';
 import '../../widgets/recent_recordings_sheet.dart';
 import '../ai/transcription_screen.dart';
@@ -47,6 +48,17 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _newMessageAnimationController;
   late AnimationController _fabAnimationController;
   late Animation<double> _fabAnimation;
+  
+  // Screen animations
+  late AnimationController _screenAnimationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _headerAnimation;
+  late Animation<double> _chatContainerAnimation;
+  late Animation<double> _inputFieldAnimation;
+  late Animation<double> _bottomNavAnimation;
+  
+  // Hover states
+  final Map<String, bool> _hoverStates = {};
   
   // List of features to showcase in the empty state
   final List<Map<String, dynamic>> _features = [
@@ -118,6 +130,54 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       curve: Curves.easeOut,
       reverseCurve: Curves.easeIn,
     );
+    
+    // Screen animations
+    _screenAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _screenAnimationController,
+        curve: Curves.easeOut,
+      ),
+    );
+    
+    // Create staggered animations
+    _headerAnimation = createStaggeredAnimation(
+      begin: 0, 
+      end: 1, 
+      startInterval: 0.0, 
+      endInterval: 0.6, 
+      curve: Curves.easeOutCubic
+    );
+    
+    _chatContainerAnimation = createStaggeredAnimation(
+      begin: 0, 
+      end: 1, 
+      startInterval: 0.2, 
+      endInterval: 0.7, 
+      curve: Curves.easeOutCubic
+    );
+    
+    _inputFieldAnimation = createStaggeredAnimation(
+      begin: 0, 
+      end: 1, 
+      startInterval: 0.4, 
+      endInterval: 0.8, 
+      curve: Curves.easeOutCubic
+    );
+    
+    _bottomNavAnimation = createStaggeredAnimation(
+      begin: 0, 
+      end: 1, 
+      startInterval: 0.6, 
+      endInterval: 0.9, 
+      curve: Curves.easeOutCubic
+    );
+    
+    _screenAnimationController.forward();
   }
   
   Future<void> _loadUserData() async {
@@ -166,6 +226,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _typingAnimationController.dispose();
     _newMessageAnimationController.dispose();
     _fabAnimationController.dispose();
+    _screenAnimationController.dispose();
     super.dispose();
   }
 
@@ -376,32 +437,54 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Expanded(
               child: Stack(
                 children: [
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                    decoration: BoxDecoration(
-                      color: isDarkMode ? const Color(0xFF1E1E2E) : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: isDarkMode ? Colors.black38 : Colors.grey.shade300,
-                          spreadRadius: 1,
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
+                  AnimatedBuilder(
+                    animation: _screenAnimationController,
+                    builder: (context, child) {
+                      return Opacity(
+                        opacity: _chatContainerAnimation.value,
+                        child: Transform.translate(
+                          offset: Offset(0, 20 * (1 - _chatContainerAnimation.value)),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                            decoration: BoxDecoration(
+                              color: isDarkMode ? const Color(0xFF1E1E2E) : Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: isDarkMode ? Colors.black38 : Colors.grey.shade300,
+                                  spreadRadius: 1,
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                _buildChatHeader(isDarkMode),
+                                Expanded(
+                                  child: _messages.isEmpty && !_isTyping
+                                      ? _buildEmptyState(isDarkMode)
+                                      : _buildMessageList(isDarkMode),
+                                ),
+                                if (_selectedImage != null) _buildImagePreview(),
+                                AnimatedBuilder(
+                                  animation: _screenAnimationController,
+                                  builder: (context, child) {
+                                    return Opacity(
+                                      opacity: _inputFieldAnimation.value,
+                                      child: Transform.translate(
+                                        offset: Offset(0, 20 * (1 - _inputFieldAnimation.value)),
+                                        child: _buildInputField(isDarkMode),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        _buildChatHeader(isDarkMode),
-                        Expanded(
-                          child: _messages.isEmpty && !_isTyping
-                              ? _buildEmptyState(isDarkMode)
-                              : _buildMessageList(isDarkMode),
-                        ),
-                        if (_selectedImage != null) _buildImagePreview(),
-                        _buildInputField(isDarkMode),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                   
                   // Scroll to bottom button
@@ -425,7 +508,18 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNavBar(),
+      bottomNavigationBar: AnimatedBuilder(
+        animation: _screenAnimationController,
+        builder: (context, child) {
+          return Opacity(
+            opacity: _bottomNavAnimation.value,
+            child: Transform.translate(
+              offset: Offset(0, 20 * (1 - _bottomNavAnimation.value)),
+              child: _buildBottomNavBar(),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -433,98 +527,109 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
     
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 16.0),
-      decoration: BoxDecoration(
-        gradient: themeProvider.headerGradient,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$_greeting, $_username',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white.withOpacity(0.95),
-                    letterSpacing: -0.5,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black.withOpacity(0.3),
-                        offset: const Offset(0, 1),
-                        blurRadius: 3,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  DateFormat('EEEE, MMMM d').format(DateTime.now()),
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white.withOpacity(0.85),
-                    letterSpacing: 0.2,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black.withOpacity(0.25),
-                        offset: const Offset(0, 1),
-                        blurRadius: 2,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          GestureDetector(
-            onTap: () {
-              Navigator.pushNamed(context, '/settings');
-            },
+    return AnimatedBuilder(
+      animation: _screenAnimationController,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _headerAnimation.value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - _headerAnimation.value)),
             child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 16.0),
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.3),
-                  width: 2,
-                ),
+                gradient: themeProvider.headerGradient,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withOpacity(0.1),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: CircleAvatar(
-                radius: 22,
-                backgroundColor: isDarkMode ? Colors.grey.shade800 : Colors.white.withOpacity(0.3),
-                backgroundImage: _userAvatarUrl != null
-                    ? NetworkImage(_userAvatarUrl!)
-                    : null,
-                child: _userAvatarUrl == null
-                    ? Icon(
-                        Icons.person,
-                        color: Colors.white.withOpacity(0.9),
-                        size: 24,
-                      )
-                    : null,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '$_greeting, $_username',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white.withOpacity(0.95),
+                            letterSpacing: -0.5,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withOpacity(0.3),
+                                offset: const Offset(0, 1),
+                                blurRadius: 3,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          DateFormat('EEEE, MMMM d').format(DateTime.now()),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white.withOpacity(0.85),
+                            letterSpacing: 0.2,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withOpacity(0.25),
+                                offset: const Offset(0, 1),
+                                blurRadius: 2,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pushNamed(context, '/settings');
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        radius: 22,
+                        backgroundColor: isDarkMode ? Colors.grey.shade800 : Colors.white.withOpacity(0.3),
+                        backgroundImage: _userAvatarUrl != null
+                            ? NetworkImage(_userAvatarUrl!)
+                            : null,
+                        child: _userAvatarUrl == null
+                            ? Icon(
+                                Icons.person,
+                                color: Colors.white.withOpacity(0.9),
+                                size: 24,
+                              )
+                            : null,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
   
@@ -534,9 +639,19 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       decoration: BoxDecoration(
-        color: isDarkMode
-            ? Colors.black.withOpacity(0.3)
-            : Colors.white.withOpacity(0.9),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDarkMode
+              ? [
+                  Colors.black.withOpacity(0.4),
+                  Colors.black.withOpacity(0.2),
+                ]
+              : [
+                  Colors.white.withOpacity(0.95),
+                  Colors.white.withOpacity(0.85),
+                ],
+        ),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(16),
           topRight: Radius.circular(16),
@@ -549,6 +664,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             width: 1,
           ),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: _isSearchMode
           ? _buildSearchField(isDarkMode)
@@ -584,25 +706,55 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ],
                 ),
                 const Spacer(),
-                IconButton(
-                  icon: Icon(
-                    _isSearchMode ? Icons.close : Icons.search,
-                    size: 22,
-                    color: themeProvider.secondaryIconColor,
+                MouseRegion(
+                  onEnter: (_) => setState(() => _hoverStates['search'] = true),
+                  onExit: (_) => setState(() => _hoverStates['search'] = false),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    decoration: BoxDecoration(
+                      color: _hoverStates['search'] == true
+                          ? themeProvider.accentColor.withOpacity(0.1)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        _isSearchMode ? Icons.close : Icons.search,
+                        size: 22,
+                        color: _hoverStates['search'] == true
+                            ? themeProvider.accentColor
+                            : themeProvider.secondaryIconColor,
+                      ),
+                      onPressed: _toggleSearchMode,
+                      tooltip: _isSearchMode ? 'Exit Search' : 'Search Messages',
+                    ),
                   ),
-                  onPressed: _toggleSearchMode,
-                  tooltip: _isSearchMode ? 'Exit Search' : 'Search Messages',
                 ),
-                IconButton(
-                  icon: Icon(
-                    Icons.more_vert,
-                    size: 22,
-                    color: themeProvider.secondaryIconColor,
+                MouseRegion(
+                  onEnter: (_) => setState(() => _hoverStates['more'] = true),
+                  onExit: (_) => setState(() => _hoverStates['more'] = false),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    decoration: BoxDecoration(
+                      color: _hoverStates['more'] == true
+                          ? themeProvider.accentColor.withOpacity(0.1)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.more_vert,
+                        size: 22,
+                        color: _hoverStates['more'] == true
+                            ? themeProvider.accentColor
+                            : themeProvider.secondaryIconColor,
+                      ),
+                      onPressed: () {
+                        _showChatOptions();
+                      },
+                      tooltip: 'More Options',
+                    ),
                   ),
-                  onPressed: () {
-                    _showChatOptions();
-                  },
-                  tooltip: 'More Options',
                 ),
               ],
             ),
@@ -966,32 +1118,47 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
     
-    return GestureDetector(
-      onTap: () {
-        Navigator.pushNamed(context, '/record');
-      },
-      onLongPress: () {
-        _showTranscriptionOptions();
-      },
-      child: Container(
-        height: 48,
-        width: 48,
-        decoration: BoxDecoration(
-          color: _isRecording ? Colors.red : Colors.blueAccent,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: (_isRecording ? Colors.red : Colors.blueAccent).withOpacity(0.3),
-              spreadRadius: 2,
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hoverStates['mic'] = true),
+      onExit: (_) => setState(() => _hoverStates['mic'] = false),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.pushNamed(context, '/record');
+        },
+        onLongPress: () {
+          _showTranscriptionOptions();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          height: 48,
+          width: 48,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: _isRecording
+                  ? [Colors.red, Colors.red.shade700]
+                  : _hoverStates['mic'] == true
+                      ? [Colors.blue.shade400, Colors.blue.shade700]
+                      : [Colors.blueAccent, Colors.blue.shade700],
             ),
-          ],
-        ),
-        child: Icon(
-          _isRecording ? Icons.mic : Icons.mic_none,
-          color: Colors.white,
-          size: 24,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: (_isRecording ? Colors.red : Colors.blueAccent).withOpacity(
+                  _hoverStates['mic'] == true ? 0.4 : 0.3
+                ),
+                spreadRadius: _hoverStates['mic'] == true ? 3 : 2,
+                blurRadius: _hoverStates['mic'] == true ? 10 : 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Icon(
+            _isRecording ? Icons.mic : Icons.mic_none,
+            color: Colors.white,
+            size: _hoverStates['mic'] == true ? 26 : 24,
+          ),
         ),
       ),
     );
@@ -1016,140 +1183,233 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return AnimatedOpacity(
           duration: const Duration(milliseconds: 300),
           opacity: isNew ? 0.0 : 1.0,
-          child: Column(
-            crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (!isUser) ...[
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: Colors.blueAccent,
-                        child: const Text(
-                          'AI',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(isUser ? 20 * (1 - value) : -20 * (1 - value), 0),
+                child: Opacity(
+                  opacity: value,
+                  child: child,
+                ),
+              );
+            },
+            child: Column(
+              crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (!isUser) ...[
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: Colors.blueAccent,
+                          child: const Text(
+                            'AI',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 8),
+                      ],
+                      Text(
+                        DateFormat('h:mm a').format(message['timestamp'] as DateTime),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade600,
+                        ),
                       ),
-                      const SizedBox(width: 8),
                     ],
-                    Text(
-                      DateFormat('h:mm a').format(message['timestamp'] as DateTime),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                margin: EdgeInsets.only(
-                  left: isUser ? 64.0 : 48.0,
-                  right: isUser ? 12.0 : 64.0,
-                  bottom: 8.0,
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                decoration: BoxDecoration(
-                  color: isUser
-                      ? Theme.of(context).colorScheme.primary.withOpacity(0.9)
-                      : isDarkMode
-                          ? const Color(0xFF1E1A33).withOpacity(0.7)
-                          : Colors.white.withOpacity(0.9),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(isUser ? 18.0 : 4.0),
-                    topRight: Radius.circular(isUser ? 4.0 : 18.0),
-                    bottomLeft: const Radius.circular(18.0),
-                    bottomRight: const Radius.circular(18.0),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.05),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
-                  border: Border.all(
-                    color: isUser
-                        ? Colors.transparent
-                        : isDarkMode
-                            ? Colors.grey.shade800.withOpacity(0.5)
-                            : Colors.grey.shade300,
-                    width: 0.5,
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (message['image'] != null)
-                      Container(
-                        height: 200,
-                        width: double.infinity,
-                        margin: const EdgeInsets.only(bottom: 8.0),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          image: DecorationImage(
-                            image: FileImage(message['image'] as File),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    Text(
-                      message['message'] as String,
-                      style: TextStyle(
-                        color: isUser
-                            ? Colors.white
+                MouseRegion(
+                  onEnter: (_) => setState(() => _hoverStates['msg_$index'] = true),
+                  onExit: (_) => setState(() => _hoverStates['msg_$index'] = false),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: EdgeInsets.only(
+                      left: isUser ? 64.0 : 48.0,
+                      right: isUser ? 12.0 : 64.0,
+                      bottom: 8.0,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: isUser
+                            ? _hoverStates['msg_$index'] == true
+                                ? [
+                                    Theme.of(context).colorScheme.primary,
+                                    Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                                  ]
+                                : [
+                                    Theme.of(context).colorScheme.primary.withOpacity(0.9),
+                                    Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                                  ]
                             : isDarkMode
-                                ? Colors.white.withOpacity(0.95)
-                                : Colors.black87,
-                        fontSize: 16,
-                        height: 1.4,
+                                ? _hoverStates['msg_$index'] == true
+                                    ? [
+                                        const Color(0xFF252045).withOpacity(0.9),
+                                        const Color(0xFF1E1A33).withOpacity(0.7),
+                                      ]
+                                    : [
+                                        const Color(0xFF1E1A33).withOpacity(0.7),
+                                        const Color(0xFF1E1A33).withOpacity(0.5),
+                                      ]
+                                : _hoverStates['msg_$index'] == true
+                                    ? [
+                                        Colors.white,
+                                        Colors.white.withOpacity(0.9),
+                                      ]
+                                    : [
+                                        Colors.white.withOpacity(0.9),
+                                        Colors.white.withOpacity(0.8),
+                                      ],
+                      ),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(isUser ? 18.0 : 4.0),
+                        topRight: Radius.circular(isUser ? 4.0 : 18.0),
+                        bottomLeft: const Radius.circular(18.0),
+                        bottomRight: const Radius.circular(18.0),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: isUser
+                              ? Theme.of(context).colorScheme.primary.withOpacity(_hoverStates['msg_$index'] == true ? 0.3 : 0.2)
+                              : Colors.black.withOpacity(isDarkMode ? 0.2 : 0.05),
+                          blurRadius: _hoverStates['msg_$index'] == true ? 8 : 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                      border: Border.all(
+                        color: isUser
+                            ? Colors.transparent
+                            : isDarkMode
+                                ? Colors.grey.shade800.withOpacity(_hoverStates['msg_$index'] == true ? 0.7 : 0.5)
+                                : Colors.grey.shade300,
+                        width: 0.5,
                       ),
                     ),
-                    if (!isUser && (message['suggestions'] as List<String>?)?.isNotEmpty == true) ...[
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: (message['suggestions'] as List<String>).map((suggestion) => GestureDetector(
-                          onTap: () => _sendMessage(text: suggestion),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (message['image'] != null)
+                          Container(
+                            height: 200,
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(bottom: 8.0),
                             decoration: BoxDecoration(
-                              color: isDarkMode
-                                  ? Colors.grey.shade800.withOpacity(0.6)
-                                  : Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(
-                                color: isDarkMode
-                                    ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
-                                    : Colors.grey.shade300,
-                                width: 0.5,
-                              ),
-                            ),
-                            child: Text(
-                              suggestion,
-                              style: TextStyle(
-                                color: isDarkMode
-                                    ? Colors.grey.shade300
-                                    : Colors.grey.shade700,
-                                fontSize: 14,
+                              borderRadius: BorderRadius.circular(12),
+                              image: DecorationImage(
+                                image: FileImage(message['image'] as File),
+                                fit: BoxFit.cover,
                               ),
                             ),
                           ),
-                        )).toList(),
-                      ),
-                    ],
-                  ],
+                        Text(
+                          message['message'] as String,
+                          style: TextStyle(
+                            color: isUser
+                                ? Colors.white
+                                : isDarkMode
+                                    ? Colors.white.withOpacity(0.95)
+                                    : Colors.black87,
+                            fontSize: 16,
+                            height: 1.4,
+                          ),
+                        ),
+                        if (!isUser && (message['suggestions'] as List<String>?)?.isNotEmpty == true) ...[
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: (message['suggestions'] as List<String>).map((suggestion) => MouseRegion(
+                              onEnter: (_) => setState(() => _hoverStates['suggestion_$suggestion'] = true),
+                              onExit: (_) => setState(() => _hoverStates['suggestion_$suggestion'] = false),
+                              child: GestureDetector(
+                                onTap: () => _sendMessage(text: suggestion),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: _hoverStates['suggestion_$suggestion'] == true
+                                          ? isDarkMode
+                                              ? [
+                                                  Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                                                  Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                                ]
+                                              : [
+                                                  Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                                                  Theme.of(context).colorScheme.primary.withOpacity(0.05),
+                                                ]
+                                          : isDarkMode
+                                              ? [
+                                                  Colors.grey.shade800.withOpacity(0.6),
+                                                  Colors.grey.shade900.withOpacity(0.4),
+                                                ]
+                                              : [
+                                                  Colors.grey.shade100,
+                                                  Colors.grey.shade50,
+                                                ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(18),
+                                    boxShadow: _hoverStates['suggestion_$suggestion'] == true
+                                        ? [
+                                            BoxShadow(
+                                              color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                                              blurRadius: 4,
+                                              spreadRadius: 0,
+                                              offset: const Offset(0, 1),
+                                            ),
+                                          ]
+                                        : [],
+                                    border: Border.all(
+                                      color: isDarkMode
+                                          ? _hoverStates['suggestion_$suggestion'] == true
+                                              ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+                                              : Theme.of(context).colorScheme.primary.withOpacity(0.3)
+                                          : _hoverStates['suggestion_$suggestion'] == true
+                                              ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
+                                              : Colors.grey.shade300,
+                                      width: 0.5,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    suggestion,
+                                    style: TextStyle(
+                                      color: _hoverStates['suggestion_$suggestion'] == true
+                                          ? Theme.of(context).colorScheme.primary
+                                          : isDarkMode
+                                              ? Colors.grey.shade300
+                                              : Colors.grey.shade700,
+                                      fontSize: 14,
+                                      fontWeight: _hoverStates['suggestion_$suggestion'] == true
+                                          ? FontWeight.w500
+                                          : FontWeight.normal,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )).toList(),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -1245,48 +1505,132 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ),
             const SizedBox(height: 32),
-            ..._features.map((feature) => Padding(
-              padding: const EdgeInsets.only(bottom: 24.0),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
+            ..._features.asMap().entries.map((entry) {
+              final index = entry.key;
+              final feature = entry.value;
+              return TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 0.0, end: 1.0),
+                duration: Duration(milliseconds: 600 + (index * 200)),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, child) {
+                  return Opacity(
+                    opacity: value,
+                    child: Transform.translate(
+                      offset: Offset(50 * (1 - value), 0),
+                      child: child,
+                    ),
+                  );
+                },
+                child: MouseRegion(
+                  onEnter: (_) => setState(() => _hoverStates['feature_$index'] = true),
+                  onExit: (_) => setState(() => _hoverStates['feature_$index'] = false),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.only(bottom: 24.0),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.blueAccent.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: _hoverStates['feature_$index'] == true
+                            ? isDarkMode
+                                ? [
+                                    Colors.grey.shade800.withOpacity(0.7),
+                                    Colors.grey.shade900.withOpacity(0.5),
+                                  ]
+                                : [
+                                    Colors.white,
+                                    Colors.grey.shade100,
+                                  ]
+                            : isDarkMode
+                                ? [
+                                    Colors.grey.shade900.withOpacity(0.3),
+                                    Colors.grey.shade900.withOpacity(0.1),
+                                  ]
+                                : [
+                                    Colors.white.withOpacity(0.7),
+                                    Colors.white.withOpacity(0.5),
+                                  ],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(_hoverStates['feature_$index'] == true ? 0.1 : 0.05),
+                          blurRadius: _hoverStates['feature_$index'] == true ? 8 : 4,
+                          spreadRadius: _hoverStates['feature_$index'] == true ? 1 : 0,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                      border: Border.all(
+                        color: _hoverStates['feature_$index'] == true
+                            ? Colors.blueAccent.withOpacity(0.3)
+                            : Colors.transparent,
+                        width: 1,
+                      ),
                     ),
-                    child: Icon(
-                      feature['icon'] as IconData,
-                      color: Colors.blueAccent,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Text(
-                          feature['title'] as String,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.blueAccent.withOpacity(_hoverStates['feature_$index'] == true ? 0.2 : 0.1),
+                                Colors.blueAccent.withOpacity(_hoverStates['feature_$index'] == true ? 0.1 : 0.05),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: _hoverStates['feature_$index'] == true
+                                ? [
+                                    BoxShadow(
+                                      color: Colors.blueAccent.withOpacity(0.2),
+                                      blurRadius: 8,
+                                      spreadRadius: 0,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : [],
+                          ),
+                          child: Icon(
+                            feature['icon'] as IconData,
+                            color: Colors.blueAccent,
+                            size: _hoverStates['feature_$index'] == true ? 30 : 28,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          feature['description'] as String,
-                          style: TextStyle(
-                            color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                            fontSize: 14,
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                feature['title'] as String,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: _hoverStates['feature_$index'] == true
+                                      ? isDarkMode ? Colors.white : Colors.black
+                                      : isDarkMode ? Colors.white.withOpacity(0.9) : Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                feature['description'] as String,
+                                style: TextStyle(
+                                  color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-            )),
+                ),
+              );
+            }).toList(),
           ],
         ),
       ),
@@ -1355,6 +1699,22 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       context,
       MaterialPageRoute(
         builder: (context) => TranscriptionScreen(audioFilePath: path),
+      ),
+    );
+  }
+
+  // Helper method to create staggered animations
+  Animation<double> createStaggeredAnimation({
+    required double begin,
+    required double end,
+    required double startInterval,
+    required double endInterval,
+    Curve curve = Curves.easeOut,
+  }) {
+    return Tween<double>(begin: begin, end: end).animate(
+      CurvedAnimation(
+        parent: _screenAnimationController,
+        curve: Interval(startInterval, endInterval, curve: curve),
       ),
     );
   }

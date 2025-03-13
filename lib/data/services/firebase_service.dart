@@ -13,6 +13,7 @@ class FirebaseService {
   static bool _initialized = false;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
   static final GoogleSignIn _googleSignIn = GoogleSignIn();
+  static bool _firestoreAvailable = false;
   
   static Future<void> initialize() async {
     if (_isFirebaseSupported()) {
@@ -22,6 +23,9 @@ class FirebaseService {
         );
         _initialized = true;
         developer.log("Firebase initialized successfully", name: "FirebaseService", error: _getPlatformName());
+        
+        // Check if Firestore is available
+        await _checkFirestoreAvailability();
       } catch (e) {
         developer.log("Failed to initialize Firebase", name: "FirebaseService", error: "${_getPlatformName()}: $e");
         // We'll still continue, but with degraded functionality
@@ -29,6 +33,27 @@ class FirebaseService {
     } else {
       developer.log("Firebase not fully supported", name: "FirebaseService", error: "${_getPlatformName()}, using alternative implementations");
     }
+  }
+  
+  static Future<void> _checkFirestoreAvailability() async {
+    try {
+      // Try to access Firestore with a timeout
+      await FirebaseFirestore.instance
+          .collection('test_connection')
+          .limit(1)
+          .get()
+          .timeout(const Duration(seconds: 5));
+      _firestoreAvailable = true;
+      developer.log("Firestore connection successful", name: "FirebaseService");
+    } catch (e) {
+      _firestoreAvailable = false;
+      developer.log("Firestore not available or not configured: $e", name: "FirebaseService");
+      // Don't throw, just mark as unavailable
+    }
+  }
+  
+  static bool isFirestoreAvailable() {
+    return _initialized && _firestoreAvailable;
   }
   
   static String _getPlatformName() {
@@ -166,13 +191,45 @@ class FirebaseService {
   }
   
   static Future<Map<String, dynamic>?> getUserData(String userId) async {
-    if (!_isFirebaseSupported()) return null;
+    if (!_initialized || !_firestoreAvailable) {
+      developer.log("Firebase or Firestore not available", name: "FirebaseService");
+      return null;
+    }
+    
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-      return doc.data();
+      return doc.exists ? doc.data() : null;
     } catch (e) {
-      developer.log('Error getting user data', name: "FirebaseService", error: "$e");
+      developer.log("Error getting user data: $e", name: "FirebaseService");
       return null;
+    }
+  }
+  
+  static Future<bool> updateUserProfile(
+    String userId, 
+    String displayName, 
+    String phone, 
+    String location
+  ) async {
+    if (!_initialized || !_firestoreAvailable) {
+      developer.log("Firebase or Firestore not available", name: "FirebaseService");
+      return false;
+    }
+    
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .set({
+            'displayName': displayName,
+            'phone': phone,
+            'location': location,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+      return true;
+    } catch (e) {
+      developer.log("Error updating user profile: $e", name: "FirebaseService");
+      return false;
     }
   }
   

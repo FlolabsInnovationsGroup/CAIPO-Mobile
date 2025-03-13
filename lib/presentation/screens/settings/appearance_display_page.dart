@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/gradient_scaffold.dart';
+import '../../widgets/base_screen.dart';
 
 class AppearanceDisplayPage extends StatefulWidget {
   const AppearanceDisplayPage({super.key});
@@ -10,7 +11,7 @@ class AppearanceDisplayPage extends StatefulWidget {
   _AppearanceDisplayPageState createState() => _AppearanceDisplayPageState();
 }
 
-class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with SingleTickerProviderStateMixin {
+class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with TickerProviderStateMixin, ScreenAnimationMixin {
   double textScale = 1.0;
   bool usePurpleGradient = true;
   String selectedFontFamily = 'Roboto';
@@ -24,8 +25,16 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
   // Map to track hover states for interactive UI
   final Map<String, bool> _hoverStates = {};
 
-  // Animation controller
-  late AnimationController _animationController;
+  // Animations for staggered entry
+  late Animation<double> _headerAnimation;
+  late Animation<double> _themeAnimation;
+  late Animation<double> _typographyAnimation;
+  late Animation<double> _animationsAnimation;
+  late Animation<double> _visualStyleAnimation;
+  late Animation<double> _bottomBarAnimation;
+  
+  // Animation controller for previews
+  late AnimationController _previewAnimationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   
@@ -51,20 +60,69 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
   void initState() {
     super.initState();
     
-    // Initialize animation controller for demos
-    _animationController = AnimationController(
+    // Initialize preview animation controller
+    _previewAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
     
     _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
+      parent: _previewAnimationController,
       curve: Curves.easeIn,
     );
     
     _scaleAnimation = CurvedAnimation(
-      parent: _animationController,
+      parent: _previewAnimationController,
       curve: Curves.easeOutBack,
+    );
+    
+    // Initialize staggered animations using ScreenAnimationMixin
+    _headerAnimation = createStaggeredAnimation(
+      begin: 0.0,
+      end: 1.0,
+      startInterval: 0.0,
+      endInterval: 0.2,
+      curve: Curves.easeOutQuart,
+    );
+    
+    _themeAnimation = createStaggeredAnimation(
+      begin: 0.0,
+      end: 1.0,
+      startInterval: 0.1,
+      endInterval: 0.3,
+      curve: Curves.easeOutQuart,
+    );
+    
+    _typographyAnimation = createStaggeredAnimation(
+      begin: 0.0,
+      end: 1.0,
+      startInterval: 0.2,
+      endInterval: 0.4,
+      curve: Curves.easeOutQuart,
+    );
+    
+    _animationsAnimation = createStaggeredAnimation(
+      begin: 0.0,
+      end: 1.0,
+      startInterval: 0.3,
+      endInterval: 0.5,
+      curve: Curves.easeOutQuart,
+    );
+    
+    _visualStyleAnimation = createStaggeredAnimation(
+      begin: 0.0,
+      end: 1.0,
+      startInterval: 0.4,
+      endInterval: 0.6,
+      curve: Curves.easeOutQuart,
+    );
+    
+    _bottomBarAnimation = createStaggeredAnimation(
+      begin: 0.0,
+      end: 1.0,
+      startInterval: 0.5,
+      endInterval: 0.7,
+      curve: Curves.easeOutQuart,
     );
     
     // Get the current theme settings
@@ -85,7 +143,7 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _previewAnimationController.dispose();
     super.dispose();
   }
 
@@ -131,9 +189,12 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
 
     return GradientScaffold(
       appBar: AppBar(
-        title: Text(
-          'Appearance & Display',
-          style: themeProvider.settingsHeaderStyle,
+        title: FadeTransition(
+          opacity: _headerAnimation,
+          child: Text(
+            'Appearance & Display',
+            style: themeProvider.settingsHeaderStyle,
+          ),
         ),
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: themeProvider.primaryIconColor),
@@ -145,38 +206,70 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
             }
           },
         ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
       ),
       body: Column(
         children: [
           // Warning banner
-          Container(
-            margin: const EdgeInsets.all(16.0),
-            padding: const EdgeInsets.all(16.0),
-            decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(themeProvider.borderRadius),
-              border: Border.all(
-                color: Colors.blue.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.info_outline,
-                  color: Colors.blue,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Changes to appearance settings will be applied immediately.',
-                    style: themeProvider.bodyMedium.copyWith(
-                      color: Colors.blue.shade800,
-                    ),
+          FadeTransition(
+            opacity: _headerAnimation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, -0.2),
+                end: Offset.zero,
+              ).animate(_headerAnimation),
+              child: Container(
+                margin: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.blue.withOpacity(0.1),
+                      Colors.blue.withOpacity(0.2),
+                    ],
                   ),
+                  borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                  border: Border.all(
+                    color: Colors.blue.withOpacity(0.3),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.withOpacity(0.05),
+                      blurRadius: 10,
+                      spreadRadius: 0,
+                    ),
+                  ],
                 ),
-              ],
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                      ),
+                      child: Icon(
+                        Icons.info_outline,
+                        color: Colors.blue,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Changes to appearance settings will be applied immediately.',
+                        style: themeProvider.bodyMedium.copyWith(
+                          color: Colors.blue.shade800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
           
@@ -192,244 +285,280 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // Theme Section
-                      _buildSection(
-                        'Theme',
-                        [
-                          _buildSettingCard(
-                            'Dark Mode',
-                            'Switch between light and dark theme',
-                            Switch(
-                              value: isDarkMode,
-                              onChanged: (value) {
-                                setState(() {
-                                  themeProvider.toggleTheme(value);
-                                  haveUnsavedChanges = true;
-                                });
-                              },
-                            ),
-                            themeProvider,
-                          ),
-                          _buildSettingCard(
-                            'Purple Gradient',
-                            'Use purple gradient style throughout the app',
-                            Switch(
-                              value: usePurpleGradient,
-                              onChanged: (value) {
-                                setState(() {
-                                  usePurpleGradient = value;
-                                  haveUnsavedChanges = true;
-                                });
-                              },
-                            ),
-                            themeProvider,
-                          ),
-                          _buildSettingCard(
-                            'Accent Color',
-                            'Choose your preferred accent color',
-                            SizedBox(
-                              width: 120,
-                              child: DropdownButton<String>(
-                                value: selectedAccentColor,
-                                isExpanded: true,
-                                items: accentColorOptions.keys.map((String color) {
-                                  return DropdownMenuItem<String>(
-                                    value: color,
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 16,
-                                          height: 16,
-                                          decoration: BoxDecoration(
-                                            color: accentColorOptions[color],
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(color),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: (String? newValue) {
-                                  if (newValue != null) {
+                      FadeTransition(
+                        opacity: _themeAnimation,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0, 0.2),
+                            end: Offset.zero,
+                          ).animate(_themeAnimation),
+                          child: _buildSection(
+                            'Theme',
+                            [
+                              _buildSettingCard(
+                                'Dark Mode',
+                                'Switch between light and dark theme',
+                                Switch(
+                                  value: isDarkMode,
+                                  onChanged: (value) {
                                     setState(() {
-                                      selectedAccentColor = newValue;
+                                      themeProvider.toggleTheme(value);
                                       haveUnsavedChanges = true;
                                     });
-                                  }
-                                },
+                                  },
+                                ),
+                                themeProvider,
                               ),
-                            ),
+                              _buildSettingCard(
+                                'Purple Gradient',
+                                'Use purple gradient style throughout the app',
+                                Switch(
+                                  value: usePurpleGradient,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      usePurpleGradient = value;
+                                      haveUnsavedChanges = true;
+                                    });
+                                  },
+                                ),
+                                themeProvider,
+                              ),
+                              _buildSettingCard(
+                                'Accent Color',
+                                'Choose your preferred accent color',
+                                SizedBox(
+                                  width: 120,
+                                  child: DropdownButton<String>(
+                                    value: selectedAccentColor,
+                                    isExpanded: true,
+                                    items: accentColorOptions.keys.map((String color) {
+                                      return DropdownMenuItem<String>(
+                                        value: color,
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 16,
+                                              height: 16,
+                                              decoration: BoxDecoration(
+                                                color: accentColorOptions[color],
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(color),
+                                          ],
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (String? newValue) {
+                                      if (newValue != null) {
+                                        setState(() {
+                                          selectedAccentColor = newValue;
+                                          haveUnsavedChanges = true;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
+                                themeProvider,
+                              ),
+                            ],
                             themeProvider,
                           ),
-                        ],
-                        themeProvider,
+                        ),
                       ),
 
                       const SizedBox(height: 16),
 
                       // Typography Section
-                      _buildSection(
-                        'Typography',
-                        [
-                          _buildSettingCard(
-                            'Text Size',
-                            'Adjust the size of text throughout the app',
-                            SizedBox(
-                              width: 200,
-                              child: Slider(
-                                value: textScale,
-                                min: 0.8,
-                                max: 1.4,
-                                divisions: 6,
-                                label: '${(textScale * 100).round()}%',
-                                onChanged: (value) {
-                                  setState(() {
-                                    textScale = value;
-                                    haveUnsavedChanges = true;
-                                  });
-                                },
+                      FadeTransition(
+                        opacity: _typographyAnimation,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0, 0.2),
+                            end: Offset.zero,
+                          ).animate(_typographyAnimation),
+                          child: _buildSection(
+                            'Typography',
+                            [
+                              _buildSettingCard(
+                                'Text Size',
+                                'Adjust the size of text throughout the app',
+                                SizedBox(
+                                  width: 200,
+                                  child: Slider(
+                                    value: textScale,
+                                    min: 0.8,
+                                    max: 1.4,
+                                    divisions: 6,
+                                    label: '${(textScale * 100).round()}%',
+                                    onChanged: (value) {
+                                      setState(() {
+                                        textScale = value;
+                                        haveUnsavedChanges = true;
+                                      });
+                                    },
+                                  ),
+                                ),
+                                themeProvider,
                               ),
-                            ),
+                              _buildSettingCard(
+                                'Font Family',
+                                'Choose your preferred font family',
+                                SizedBox(
+                                  width: 150,
+                                  child: DropdownButton<String>(
+                                    value: selectedFontFamily,
+                                    isExpanded: true,
+                                    items: fontOptions.map((String font) {
+                                      return DropdownMenuItem<String>(
+                                        value: font,
+                                        child: Text(
+                                          font,
+                                          style: TextStyle(fontFamily: font),
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (String? newValue) {
+                                      if (newValue != null) {
+                                        setState(() {
+                                          selectedFontFamily = newValue;
+                                          haveUnsavedChanges = true;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
+                                themeProvider,
+                              ),
+                              _buildTextPreview(isDarkMode, themeProvider),
+                            ],
                             themeProvider,
                           ),
-                          _buildSettingCard(
-                            'Font Family',
-                            'Choose your preferred font family',
-                            SizedBox(
-                              width: 150,
-                              child: DropdownButton<String>(
-                                value: selectedFontFamily,
-                                isExpanded: true,
-                                items: fontOptions.map((String font) {
-                                  return DropdownMenuItem<String>(
-                                    value: font,
-                                    child: Text(
-                                      font,
-                                      style: TextStyle(fontFamily: font),
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: (String? newValue) {
-                                  if (newValue != null) {
-                                    setState(() {
-                                      selectedFontFamily = newValue;
-                                      haveUnsavedChanges = true;
-                                    });
-                                  }
-                                },
-                              ),
-                            ),
-                            themeProvider,
-                          ),
-                          _buildTextPreview(isDarkMode, themeProvider),
-                        ],
-                        themeProvider,
+                        ),
                       ),
 
                       const SizedBox(height: 16),
 
                       // Animations Section
-                      _buildSection(
-                        'Animations',
-                        [
-                          _buildSettingCard(
-                            'Enable Animations',
-                            'Show subtle animations throughout the app',
-                            Switch(
-                              value: useAnimations,
-                              onChanged: (value) {
-                                setState(() {
-                                  useAnimations = value;
-                                  haveUnsavedChanges = true;
-                                });
-                              },
-                            ),
-                            themeProvider,
-                          ),
-                          if (useAnimations)
-                            _buildSettingCard(
-                              'Animation Speed',
-                              'Adjust the speed of animations',
-                              SizedBox(
-                                width: 150,
-                                child: DropdownButton<String>(
-                                  value: selectedAnimationSpeed,
-                                  isExpanded: true,
-                                  items: animationSpeedOptions.map((String speed) {
-                                    return DropdownMenuItem<String>(
-                                      value: speed,
-                                      child: Text(speed),
-                                    );
-                                  }).toList(),
-                                  onChanged: (String? newValue) {
-                                    if (newValue != null) {
-                                      setState(() {
-                                        selectedAnimationSpeed = newValue;
-                                        haveUnsavedChanges = true;
-                                      });
-                                    }
+                      FadeTransition(
+                        opacity: _animationsAnimation,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0, 0.2),
+                            end: Offset.zero,
+                          ).animate(_animationsAnimation),
+                          child: _buildSection(
+                            'Animations',
+                            [
+                              _buildSettingCard(
+                                'Enable Animations',
+                                'Show subtle animations throughout the app',
+                                Switch(
+                                  value: useAnimations,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      useAnimations = value;
+                                      haveUnsavedChanges = true;
+                                    });
                                   },
                                 ),
+                                themeProvider,
                               ),
-                              themeProvider,
-                            ),
-                          _buildAnimationPreview(isDarkMode, themeProvider),
-                        ],
-                        themeProvider,
+                              if (useAnimations)
+                                _buildSettingCard(
+                                  'Animation Speed',
+                                  'Adjust the speed of animations',
+                                  SizedBox(
+                                    width: 150,
+                                    child: DropdownButton<String>(
+                                      value: selectedAnimationSpeed,
+                                      isExpanded: true,
+                                      items: animationSpeedOptions.map((String speed) {
+                                        return DropdownMenuItem<String>(
+                                          value: speed,
+                                          child: Text(speed),
+                                        );
+                                      }).toList(),
+                                      onChanged: (String? newValue) {
+                                        if (newValue != null) {
+                                          setState(() {
+                                            selectedAnimationSpeed = newValue;
+                                            haveUnsavedChanges = true;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  themeProvider,
+                                ),
+                              _buildAnimationPreview(isDarkMode, themeProvider),
+                            ],
+                            themeProvider,
+                          ),
+                        ),
                       ),
 
                       const SizedBox(height: 16),
 
                       // Visual Style Section
-                      _buildSection(
-                        'Visual Style',
-                        [
-                          _buildSettingCard(
-                            'Corner Roundness',
-                            'Adjust the roundness of corners throughout the app',
-                            SizedBox(
-                              width: 200,
-                              child: Slider(
-                                value: selectedBorderRadius,
-                                min: 0,
-                                max: 24,
-                                divisions: 12,
-                                label: '${selectedBorderRadius.round()}',
-                                onChanged: (value) {
-                                  setState(() {
-                                    selectedBorderRadius = value;
-                                    haveUnsavedChanges = true;
-                                  });
-                                },
+                      FadeTransition(
+                        opacity: _visualStyleAnimation,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0, 0.2),
+                            end: Offset.zero,
+                          ).animate(_visualStyleAnimation),
+                          child: _buildSection(
+                            'Visual Style',
+                            [
+                              _buildSettingCard(
+                                'Corner Roundness',
+                                'Adjust the roundness of corners throughout the app',
+                                SizedBox(
+                                  width: 200,
+                                  child: Slider(
+                                    value: selectedBorderRadius,
+                                    min: 0,
+                                    max: 24,
+                                    divisions: 12,
+                                    label: '${selectedBorderRadius.round()}',
+                                    onChanged: (value) {
+                                      setState(() {
+                                        selectedBorderRadius = value;
+                                        haveUnsavedChanges = true;
+                                      });
+                                    },
+                                  ),
+                                ),
+                                themeProvider,
                               ),
-                            ),
+                              _buildSettingCard(
+                                'Elevation',
+                                'Adjust the shadow depth of elements',
+                                SizedBox(
+                                  width: 200,
+                                  child: Slider(
+                                    value: selectedElevation,
+                                    min: 0,
+                                    max: 2,
+                                    divisions: 4,
+                                    label: selectedElevation.toStringAsFixed(1),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        selectedElevation = value;
+                                        haveUnsavedChanges = true;
+                                      });
+                                    },
+                                  ),
+                                ),
+                                themeProvider,
+                              ),
+                              _buildStyleSettings(isDarkMode, themeProvider),
+                            ],
                             themeProvider,
                           ),
-                          _buildSettingCard(
-                            'Elevation',
-                            'Adjust the shadow depth of elements',
-                            SizedBox(
-                              width: 200,
-                              child: Slider(
-                                value: selectedElevation,
-                                min: 0,
-                                max: 2,
-                                divisions: 4,
-                                label: selectedElevation.toStringAsFixed(1),
-                                onChanged: (value) {
-                                  setState(() {
-                                    selectedElevation = value;
-                                    haveUnsavedChanges = true;
-                                  });
-                                },
-                              ),
-                            ),
-                            themeProvider,
-                          ),
-                          _buildStyleSettings(isDarkMode, themeProvider),
-                        ],
-                        themeProvider,
+                        ),
                       ),
 
                       const SizedBox(height: 16),
@@ -441,42 +570,90 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
           ),
           
           // Bottom action bar
-          Container(
-            padding: const EdgeInsets.all(16.0),
-            decoration: themeProvider.settingsBottomBarDecoration,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                TextButton.icon(
-                  onPressed: () => _resetSettings(),
-                  icon: const Icon(Icons.restore, color: Colors.red),
-                  label: Text(
-                    'Reset',
-                    style: themeProvider.bodyMedium.copyWith(
-                      color: Colors.red,
-                    ),
+          FadeTransition(
+            opacity: _bottomBarAnimation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.2),
+                end: Offset.zero,
+              ).animate(_bottomBarAnimation),
+              child: Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: isDarkMode
+                        ? [
+                            Colors.black.withOpacity(0.7),
+                            Colors.black.withOpacity(0.9),
+                          ]
+                        : [
+                            Colors.white.withOpacity(0.9),
+                            Colors.white,
+                          ],
                   ),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(themeProvider.borderRadius),
+                    topRight: Radius.circular(themeProvider.borderRadius),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
                 ),
-                ElevatedButton(
-                  onPressed: haveUnsavedChanges ? _savePreferences : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: themeProvider.accentColor,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: themeProvider.accentColor.withOpacity(0.5),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => _resetSettings(),
+                      icon: const Icon(Icons.restore, color: Colors.red),
+                      label: Text(
+                        'Reset',
+                        style: themeProvider.bodyMedium.copyWith(
+                          color: Colors.red,
+                        ),
+                      ),
                     ),
-                  ),
-                  child: Text(
-                    'Save Changes',
-                    style: themeProvider.titleMedium.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
+                    ElevatedButton(
+                      onPressed: haveUnsavedChanges ? _savePreferences : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: haveUnsavedChanges 
+                            ? themeProvider.accentColor
+                            : themeProvider.accentColor.withOpacity(0.5),
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: themeProvider.accentColor.withOpacity(0.5),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                        ),
+                        elevation: haveUnsavedChanges ? 2 : 0,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.save,
+                            size: 18,
+                            color: Colors.white.withOpacity(haveUnsavedChanges ? 1.0 : 0.7),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Save Changes',
+                            style: themeProvider.titleMedium.copyWith(
+                              color: Colors.white.withOpacity(haveUnsavedChanges ? 1.0 : 0.7),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -485,24 +662,65 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
   }
 
   Widget _buildSection(String title, List<Widget> children, ThemeProvider themeProvider) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
           padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 12.0),
           margin: const EdgeInsets.only(bottom: 8.0),
-          decoration: themeProvider.settingsHeaderDecoration,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isDarkMode
+                  ? [
+                      themeProvider.accentColor.withOpacity(0.1),
+                      themeProvider.accentColor.withOpacity(0.05),
+                    ]
+                  : [
+                      themeProvider.accentColor.withOpacity(0.1),
+                      themeProvider.accentColor.withOpacity(0.05),
+                    ],
+            ),
+            borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+            boxShadow: [
+              BoxShadow(
+                color: themeProvider.accentColor.withOpacity(0.05),
+                blurRadius: 10,
+                spreadRadius: 0,
+              ),
+            ],
+          ),
           child: Row(
             children: [
-              Icon(
-                _getSectionIcon(title),
-                color: themeProvider.accentColor,
-                size: 24,
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      themeProvider.accentColor.withOpacity(0.2),
+                      themeProvider.accentColor.withOpacity(0.1),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                ),
+                child: Icon(
+                  _getSectionIcon(title),
+                  color: themeProvider.accentColor,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 12),
               Text(
                 title,
-                style: themeProvider.settingsHeaderStyle,
+                style: themeProvider.settingsHeaderStyle.copyWith(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
               ),
             ],
           ),
@@ -920,7 +1138,7 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
             style: TextStyle(
               fontSize: 12,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isDarkMode ? Colors.white70 : Colors.black87,
+              color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade700,
             ),
           ),
         ],
@@ -1144,30 +1362,97 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
   Widget _buildTextPreview(bool isDarkMode, ThemeProvider themeProvider) {
     return Card(
       elevation: isDarkMode ? 0 : 2,
-      color: isDarkMode 
-          ? Colors.black.withOpacity(0.3) 
-          : Colors.white.withOpacity(0.8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
+      color: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(themeProvider.borderRadius)),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDarkMode 
+                ? [
+                    Colors.black.withOpacity(0.6),
+                    Colors.black.withOpacity(0.4),
+                  ]
+                : [
+                    Colors.white.withOpacity(0.9),
+                    Colors.white.withOpacity(0.7),
+                  ],
+          ),
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+          border: Border.all(
+            color: isDarkMode
+                ? Colors.grey.shade800.withOpacity(0.5)
+                : Colors.grey.shade300,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Text Preview',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Text Preview',
+                  style: themeProvider.titleMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: themeProvider.primaryTextColor,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: themeProvider.accentColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                    border: Border.all(
+                      color: themeProvider.accentColor.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Text(
+                    selectedFontFamily,
+                    style: TextStyle(
+                      fontFamily: selectedFontFamily,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: themeProvider.accentColor,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16.0),
               decoration: BoxDecoration(
-                color: isDarkMode 
-                    ? Colors.grey.shade900 
-                    : Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(8),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDarkMode 
+                      ? [
+                          Colors.grey.shade900,
+                          Colors.black,
+                        ]
+                      : [
+                          Colors.grey.shade100,
+                          Colors.grey.shade200,
+                        ],
+                ),
+                borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                border: Border.all(
+                  color: isDarkMode
+                      ? Colors.grey.shade800
+                      : Colors.grey.shade300,
+                  width: 1,
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1178,6 +1463,7 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
                       fontSize: 20 * textScale,
                       fontWeight: FontWeight.bold,
                       fontFamily: selectedFontFamily,
+                      color: themeProvider.primaryTextColor,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1187,6 +1473,7 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
                       fontSize: 16 * textScale,
                       fontWeight: FontWeight.w500,
                       fontFamily: selectedFontFamily,
+                      color: themeProvider.primaryTextColor,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1195,6 +1482,7 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
                     style: TextStyle(
                       fontSize: 14 * textScale,
                       fontFamily: selectedFontFamily,
+                      color: themeProvider.secondaryTextColor,
                     ),
                   ),
                 ],
@@ -1208,23 +1496,74 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
 
   Widget _buildAnimationPreview(bool isDarkMode, ThemeProvider themeProvider) {
     return Card(
-      elevation: isDarkMode ? 1 : 2,
-      color: isDarkMode 
-          ? Colors.black26
-          : Colors.white.withOpacity(0.9),
+      elevation: 0,
+      color: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(themeProvider.borderRadius),
       ),
-      child: Padding(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDarkMode 
+                ? [
+                    Colors.black.withOpacity(0.6),
+                    Colors.black.withOpacity(0.4),
+                  ]
+                : [
+                    Colors.white.withOpacity(0.9),
+                    Colors.white.withOpacity(0.7),
+                  ],
+          ),
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+          border: Border.all(
+            color: isDarkMode
+                ? Colors.grey.shade800.withOpacity(0.5)
+                : Colors.grey.shade300,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Live Preview',
-              style: themeProvider.titleMedium.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Live Preview',
+                  style: themeProvider.titleMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: themeProvider.primaryTextColor,
+                  ),
+                ),
+                if (!useAnimations)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                      border: Border.all(
+                        color: Colors.orange.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Text(
+                      'Disabled',
+                      style: themeProvider.bodyMedium.copyWith(
+                        color: Colors.orange,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 16),
             Row(
@@ -1238,8 +1577,8 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
                     });
                     
                     // Start the animation
-                    _animationController.reset();
-                    _animationController.forward();
+                    _previewAnimationController.reset();
+                    _previewAnimationController.forward();
                     
                     // Stop the animation after it's done
                     Future.delayed(const Duration(milliseconds: 800), () {
@@ -1284,10 +1623,25 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
             Container(
               height: 200,
               decoration: BoxDecoration(
-                color: isDarkMode ? Colors.black12 : Colors.grey.shade100,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDarkMode 
+                      ? [
+                          Colors.grey.shade900,
+                          Colors.black,
+                        ]
+                      : [
+                          Colors.grey.shade100,
+                          Colors.grey.shade200,
+                        ],
+                ),
                 borderRadius: BorderRadius.circular(themeProvider.borderRadius),
                 border: Border.all(
-                  color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
+                  color: isDarkMode
+                      ? Colors.grey.shade800
+                      : Colors.grey.shade300,
+                  width: 1,
                 ),
               ),
               child: Center(
@@ -1299,7 +1653,14 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
                       width: 120,
                       height: 120,
                       decoration: BoxDecoration(
-                        color: accentColorOptions[selectedAccentColor],
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            accentColorOptions[selectedAccentColor]!,
+                            accentColorOptions[selectedAccentColor]!.withOpacity(0.8),
+                          ],
+                        ),
                         borderRadius: BorderRadius.circular(selectedBorderRadius),
                         boxShadow: [
                           BoxShadow(
@@ -1528,24 +1889,74 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
   
   Widget _buildStyleSettings(bool isDarkMode, ThemeProvider themeProvider) {
     return Card(
-      elevation: isDarkMode ? 1 : 2,
-      color: isDarkMode 
-          ? Colors.black26
-          : Colors.white.withOpacity(0.9),
+      elevation: 0,
+      color: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(themeProvider.borderRadius),
       ),
-      child: Padding(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDarkMode 
+                ? [
+                    Colors.black.withOpacity(0.6),
+                    Colors.black.withOpacity(0.4),
+                  ]
+                : [
+                    Colors.white.withOpacity(0.9),
+                    Colors.white.withOpacity(0.7),
+                  ],
+          ),
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+          border: Border.all(
+            color: isDarkMode
+                ? Colors.grey.shade800.withOpacity(0.5)
+                : Colors.grey.shade300,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Corner roundness
-            Text(
-              'Corner Roundness',
-              style: themeProvider.titleMedium.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Corner Roundness',
+                  style: themeProvider.titleMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: themeProvider.primaryTextColor,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: themeProvider.accentColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                    border: Border.all(
+                      color: themeProvider.accentColor.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Text(
+                    '${selectedBorderRadius.toInt()}px',
+                    style: themeProvider.bodyMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: themeProvider.accentColor,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Row(
@@ -1554,7 +1965,14 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
                   width: 24,
                   height: 24,
                   decoration: BoxDecoration(
-                    color: themeProvider.accentColor.withOpacity(0.2),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        themeProvider.accentColor.withOpacity(0.3),
+                        themeProvider.accentColor.withOpacity(0.2),
+                      ],
+                    ),
                     borderRadius: BorderRadius.circular(selectedBorderRadius / 3),
                   ),
                 ),
@@ -1578,7 +1996,14 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
                   width: 24,
                   height: 24,
                   decoration: BoxDecoration(
-                    color: themeProvider.accentColor.withOpacity(0.2),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        themeProvider.accentColor.withOpacity(0.3),
+                        themeProvider.accentColor.withOpacity(0.2),
+                      ],
+                    ),
                     borderRadius: BorderRadius.circular(selectedBorderRadius),
                   ),
                 ),
@@ -1588,11 +2013,34 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
             const SizedBox(height: 24),
             
             // Elevation
-            Text(
-              'Elevation',
-              style: themeProvider.titleMedium.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Elevation',
+                  style: themeProvider.titleMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: themeProvider.primaryTextColor,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: themeProvider.accentColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                    border: Border.all(
+                      color: themeProvider.accentColor.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Text(
+                    selectedElevation.toStringAsFixed(1),
+                    style: themeProvider.bodyMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: themeProvider.accentColor,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Row(
@@ -1631,14 +2079,25 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isDarkMode 
-                    ? Colors.black12
-                    : Colors.grey.shade100,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDarkMode 
+                      ? [
+                          Colors.grey.shade900,
+                          Colors.black,
+                        ]
+                      : [
+                          Colors.grey.shade100,
+                          Colors.grey.shade200,
+                        ],
+                ),
                 borderRadius: BorderRadius.circular(themeProvider.borderRadius),
                 border: Border.all(
-                  color: isDarkMode 
-                      ? Colors.grey.shade800 
+                  color: isDarkMode
+                      ? Colors.grey.shade800
                       : Colors.grey.shade300,
+                  width: 1,
                 ),
               ),
               child: Row(
@@ -1682,35 +2141,67 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
           width: 100,
           height: 60,
           decoration: BoxDecoration(
-            color: isButton 
-                ? accentColorOptions[selectedAccentColor]
-                : isDarkMode
-                    ? Colors.grey.shade900
-                    : Colors.white,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: isButton 
+                  ? [
+                      accentColorOptions[selectedAccentColor]!,
+                      accentColorOptions[selectedAccentColor]!.withOpacity(0.8),
+                    ]
+                  : isDarkMode
+                      ? [
+                          Colors.grey.shade900,
+                          Colors.black,
+                        ]
+                      : [
+                          Colors.white,
+                          Colors.white.withOpacity(0.9),
+                        ],
+            ),
             borderRadius: BorderRadius.circular(borderRadius),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1 * elevation),
+                color: isButton
+                    ? accentColorOptions[selectedAccentColor]!.withOpacity(0.3 * elevation)
+                    : Colors.black.withOpacity(0.1 * elevation),
                 blurRadius: 8 * elevation,
                 spreadRadius: 1 * elevation,
                 offset: Offset(0, 2 * elevation),
               ),
             ],
+            border: Border.all(
+              color: isButton
+                  ? Colors.transparent
+                  : isDarkMode
+                      ? Colors.grey.shade800.withOpacity(0.5)
+                      : Colors.grey.shade300,
+              width: 1,
+            ),
           ),
           child: Center(
             child: Text(
               label,
               style: themeProvider.bodyMedium.copyWith(
                 color: isButton ? Colors.white : themeProvider.primaryTextColor,
+                fontWeight: isButton ? FontWeight.bold : FontWeight.normal,
               ),
             ),
           ),
         ),
         const SizedBox(height: 8),
-        Text(
-          '${borderRadius.toInt()}px / ${elevation.toStringAsFixed(1)}',
-          style: themeProvider.bodySmall.copyWith(
-            color: themeProvider.secondaryTextColor,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: themeProvider.accentColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+          ),
+          child: Text(
+            '${borderRadius.toInt()}px / ${elevation.toStringAsFixed(1)}',
+            style: themeProvider.bodySmall.copyWith(
+              color: themeProvider.accentColor,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ],
@@ -1765,13 +2256,31 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
   }
 
   void _showUnsavedChangesDialog() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Unsaved Changes'),
-          content: const Text(
+          backgroundColor: isDarkMode 
+              ? Colors.grey.shade900 
+              : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+          ),
+          title: Text(
+            'Unsaved Changes',
+            style: themeProvider.titleMedium.copyWith(
+              fontWeight: FontWeight.bold,
+              color: themeProvider.primaryTextColor,
+            ),
+          ),
+          content: Text(
             'You have unsaved appearance changes. Would you like to save them before leaving?',
+            style: themeProvider.bodyMedium.copyWith(
+              color: themeProvider.secondaryTextColor,
+            ),
           ),
           actions: [
             TextButton(
@@ -1779,15 +2288,39 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
                 Navigator.pop(context); // Close dialog
                 Navigator.pop(context); // Return to previous screen
               },
-              child: const Text('DISCARD'),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+              child: Text(
+                'DISCARD',
+                style: themeProvider.bodyMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red,
+                ),
+              ),
             ),
-            TextButton(
+            ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
                 _savePreferences();
                 Navigator.pop(context);
               },
-              child: const Text('SAVE'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: themeProvider.accentColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                ),
+              ),
+              child: Text(
+                'SAVE',
+                style: themeProvider.bodyMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ],
         );
@@ -1796,20 +2329,47 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
   }
 
   void _resetSettings() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Reset Settings'),
-          content: const Text(
-            'Are you sure you want to reset all appearance settings to their defaults?'
+          backgroundColor: isDarkMode 
+              ? Colors.grey.shade900 
+              : Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+          ),
+          title: Text(
+            'Reset Settings',
+            style: themeProvider.titleMedium.copyWith(
+              fontWeight: FontWeight.bold,
+              color: themeProvider.primaryTextColor,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to reset all appearance settings to their defaults?',
+            style: themeProvider.bodyMedium.copyWith(
+              color: themeProvider.secondaryTextColor,
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('CANCEL'),
+              style: TextButton.styleFrom(
+                foregroundColor: themeProvider.secondaryTextColor,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+              child: Text(
+                'CANCEL',
+                style: themeProvider.bodyMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-            TextButton(
+            ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
                 setState(() {
@@ -1824,7 +2384,21 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
                   haveUnsavedChanges = true;
                 });
               },
-              child: const Text('RESET'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                ),
+              ),
+              child: Text(
+                'RESET',
+                style: themeProvider.bodyMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ],
         );
@@ -1838,52 +2412,113 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Sing
     Widget trailing,
     ThemeProvider themeProvider,
   ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8.0),
-      decoration: themeProvider.settingsCardDecoration,
-      child: IntrinsicHeight(
-        child: Row(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: themeProvider.getSettingsIconDecoration(
-                  isActive: title.toLowerCase().contains('dark') 
-                      ? Theme.of(context).brightness == Brightness.dark 
-                      : true
-                ),
-                child: Icon(
-                  _getSettingIcon(title),
-                  color: themeProvider.accentColor,
-                  size: 24,
-                ),
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: themeProvider.settingsTitleStyle,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: themeProvider.settingsDescriptionStyle,
-                    ),
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final hoverKey = 'setting_$title';
+    final isHovering = _hoverStates[hoverKey] ?? false;
+    
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hoverStates[hoverKey] = true),
+      onExit: (_) => setState(() => _hoverStates[hoverKey] = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(bottom: 8.0),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDarkMode
+                ? [
+                    Colors.black.withOpacity(isHovering ? 0.7 : 0.5),
+                    Colors.black.withOpacity(isHovering ? 0.6 : 0.4),
+                  ]
+                : [
+                    Colors.white.withOpacity(isHovering ? 0.95 : 0.9),
+                    Colors.white.withOpacity(isHovering ? 0.9 : 0.8),
                   ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(right: 16.0),
-              child: trailing,
+          ),
+          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isHovering ? 0.1 : 0.05),
+              blurRadius: isHovering ? 8 : 5,
+              spreadRadius: isHovering ? 1 : 0,
+              offset: isHovering ? const Offset(0, 2) : const Offset(0, 1),
             ),
           ],
+          border: Border.all(
+            color: isHovering
+                ? themeProvider.accentColor.withOpacity(0.3)
+                : isDarkMode
+                    ? Colors.grey.shade800.withOpacity(0.3)
+                    : Colors.grey.shade300.withOpacity(0.5),
+            width: 1,
+          ),
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        themeProvider.accentColor.withOpacity(0.2),
+                        themeProvider.accentColor.withOpacity(0.1),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                    boxShadow: isHovering
+                        ? [
+                            BoxShadow(
+                              color: themeProvider.accentColor.withOpacity(0.2),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            ),
+                          ]
+                        : [],
+                  ),
+                  child: Icon(
+                    _getSettingIcon(title),
+                    color: themeProvider.accentColor,
+                    size: 24,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: themeProvider.settingsTitleStyle.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: themeProvider.settingsDescriptionStyle.copyWith(
+                          color: isDarkMode
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 16.0),
+                child: trailing,
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -25,6 +25,9 @@ class _LoginScreenState extends State<LoginScreen>
   String? emailError;
   String? passwordError;
   
+  // Map to track hover states for different elements
+  final Map<String, bool> _hoveredItems = {};
+  
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
@@ -346,20 +349,43 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _buildLoginButton(ThemeProvider themeProvider) {
     return SizedBox(
       width: double.infinity,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : handleLogin,
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          backgroundColor: themeProvider.accentColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-        child: Text(
-          'LOG IN',
-          style: themeProvider.titleMedium.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => isHoveringLogin = true),
+        onExit: (_) => setState(() => isHoveringLogin = false),
+        child: AnimatedContainer(
+          duration: themeProvider.animationDurationShort,
+          transform: isHoveringLogin 
+              ? (Matrix4.identity()..scale(1.02))
+              : Matrix4.identity(),
+          child: ElevatedButton(
+            onPressed: isLoading ? null : handleLogin,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: themeProvider.accentColor,
+              foregroundColor: Colors.white,
+              elevation: isHoveringLogin ? 8 : 4,
+              shadowColor: themeProvider.accentColor.withOpacity(isHoveringLogin ? 0.6 : 0.3),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+              ),
+            ),
+            child: isLoading
+                ? SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Text(
+                    'LOG IN',
+                    style: themeProvider.titleMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
           ),
         ),
       ),
@@ -369,41 +395,61 @@ class _LoginScreenState extends State<LoginScreen>
   Widget _buildSignUpOption(ThemeProvider themeProvider) {
     return SizedBox(
       width: double.infinity,
-      child: TextButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) =>
-                  const AuthScreen(signUpMode: true),
-              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0.0, 0.2),
-                      end: Offset.zero,
-                    ).chain(CurveTween(curve: Curves.easeOutCubic))
-                        .animate(animation),
-                    child: child,
-                  ),
-                );
-              },
-              transitionDuration: const Duration(milliseconds: 500),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hoveredItems['signup'] = true),
+        onExit: (_) => setState(() => _hoveredItems['signup'] = false),
+        child: AnimatedContainer(
+          duration: themeProvider.animationDurationShort,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+            border: Border.all(
+              color: _hoveredItems['signup'] == true
+                  ? themeProvider.accentColor
+                  : Colors.transparent,
+              width: 1.5,
             ),
-          );
-        },
-        style: TextButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
           ),
-        ),
-        child: Text(
-          'Get Started',
-          style: themeProvider.titleMedium.copyWith(
-            color: themeProvider.accentColor,
-            fontWeight: FontWeight.w600,
+          child: TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (context, animation, secondaryAnimation) =>
+                      const AuthScreen(signUpMode: true),
+                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0.0, 0.2),
+                          end: Offset.zero,
+                        ).chain(CurveTween(curve: Curves.easeOutCubic))
+                            .animate(animation),
+                        child: child,
+                      ),
+                    );
+                  },
+                  transitionDuration: const Duration(milliseconds: 500),
+                ),
+              );
+            },
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+              ),
+              foregroundColor: _hoveredItems['signup'] == true
+                  ? themeProvider.accentColor
+                  : themeProvider.accentColor.withOpacity(0.8),
+            ),
+            child: Text(
+              'Get Started',
+              style: themeProvider.titleMedium.copyWith(
+                color: themeProvider.accentColor,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
           ),
         ),
       ),
@@ -420,98 +466,144 @@ class _LoginScreenState extends State<LoginScreen>
     Widget? suffixIcon,
     String? Function(String?)? validator,
   }) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText,
-      style: themeProvider.bodyLarge.copyWith(
-        color: Colors.white,
+    final String fieldKey = hintText.toLowerCase().replaceAll(' ', '_');
+    final bool isHovered = _hoveredItems[fieldKey] ?? false;
+    
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: MouseRegion(
+          onEnter: (_) => setState(() => _hoveredItems[fieldKey] = true),
+          onExit: (_) => setState(() => _hoveredItems[fieldKey] = false),
+          child: AnimatedContainer(
+            duration: themeProvider.animationDurationShort,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+              boxShadow: isHovered ? [
+                BoxShadow(
+                  color: themeProvider.accentColor.withOpacity(0.2),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 2),
+                ),
+              ] : [],
+            ),
+            child: TextFormField(
+              controller: controller,
+              obscureText: obscureText,
+              style: themeProvider.bodyLarge.copyWith(
+                color: Colors.white,
+              ),
+              validator: validator,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: isHovered ? Colors.white.withOpacity(0.3) : Colors.white24,
+                hintText: hintText,
+                hintStyle: themeProvider.bodyMedium.copyWith(
+                  color: Colors.white54,
+                ),
+                prefixIcon: Icon(icon, color: isHovered ? Colors.white : Colors.white70),
+                suffixIcon: suffixIcon,
+                errorText: errorText,
+                errorStyle: themeProvider.bodySmall.copyWith(
+                  color: themeProvider.errorColor,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                  borderSide: BorderSide(color: themeProvider.accentColor, width: 2),
+                ),
+                errorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                  borderSide: BorderSide(color: themeProvider.errorColor, width: 1),
+                ),
+                focusedErrorBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(themeProvider.borderRadius),
+                  borderSide: BorderSide(color: themeProvider.errorColor, width: 2),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 16,
+                ),
+              ),
+              onFieldSubmitted: (_) {
+                if (_formKey.currentState!.validate()) {
+                  handleLogin();
+                }
+              },
+            ),
+          ),
+        ),
       ),
-      validator: validator,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.white24,
-        hintText: hintText,
-        hintStyle: themeProvider.bodyMedium.copyWith(
-          color: Colors.white54,
-        ),
-        prefixIcon: Icon(icon, color: Colors.white70),
-        suffixIcon: suffixIcon,
-        errorText: errorText,
-        errorStyle: themeProvider.bodySmall.copyWith(
-          color: themeProvider.errorColor,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
-          borderSide: BorderSide(color: themeProvider.accentColor, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
-          borderSide: BorderSide(color: themeProvider.errorColor, width: 1),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
-          borderSide: BorderSide(color: themeProvider.errorColor, width: 2),
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-      ),
-      onFieldSubmitted: (_) {
-        if (_formKey.currentState!.validate()) {
-          handleLogin();
-        }
-      },
     );
   }
 
   Widget _buildRememberMeRow(ThemeProvider themeProvider) {
-    return Row(
-      children: [
-        Checkbox(
-          value: rememberMe,
-          onChanged: (value) {
-            setState(() => rememberMe = value ?? false);
-          },
-          activeColor: themeProvider.accentColor,
-          checkColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(3),
-          ),
-        ),
-        Text(
-          "Remember Me",
-          style: themeProvider.bodyMedium.copyWith(
-            color: themeProvider.secondaryTextColor,
-          ),
-        ),
-        const Spacer(),
-        TextButton(
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Password reset functionality coming soon'),
-                behavior: SnackBarBehavior.floating,
-                duration: Duration(seconds: 2),
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Row(
+          children: [
+            Theme(
+              data: Theme.of(context).copyWith(
+                checkboxTheme: CheckboxThemeData(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
               ),
-            );
-          },
-          style: TextButton.styleFrom(
-            foregroundColor: themeProvider.accentColor,
-          ),
-          child: Text(
-            'Forgot Password?',
-            style: themeProvider.bodyMedium.copyWith(
-              color: themeProvider.accentColor,
-              fontWeight: FontWeight.bold,
+              child: Checkbox(
+                value: rememberMe,
+                onChanged: (value) {
+                  setState(() => rememberMe = value ?? false);
+                },
+                activeColor: themeProvider.accentColor,
+                checkColor: Colors.white,
+              ),
             ),
-          ),
+            Text(
+              "Remember Me",
+              style: themeProvider.bodyMedium.copyWith(
+                color: themeProvider.secondaryTextColor,
+              ),
+            ),
+            const Spacer(),
+            MouseRegion(
+              onEnter: (_) => setState(() => _hoveredItems['forgot'] = true),
+              onExit: (_) => setState(() => _hoveredItems['forgot'] = false),
+              child: TextButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Password reset functionality coming soon'),
+                      behavior: SnackBarBehavior.floating,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: themeProvider.accentColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                child: AnimatedDefaultTextStyle(
+                  duration: themeProvider.animationDurationShort,
+                  style: themeProvider.bodyMedium.copyWith(
+                    color: themeProvider.accentColor,
+                    fontWeight: _hoveredItems['forgot'] == true ? FontWeight.bold : FontWeight.w600,
+                    decoration: _hoveredItems['forgot'] == true ? TextDecoration.underline : TextDecoration.none,
+                  ),
+                  child: const Text('Forgot Password?'),
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -522,30 +614,57 @@ class _LoginScreenState extends State<LoginScreen>
     required ThemeProvider themeProvider,
     required VoidCallback onPressed,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: themeProvider.cardBackground.withOpacity(0.3),
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+    final String buttonKey = 'social_${label.toLowerCase()}';
+    
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hoveredItems[buttonKey] = true),
+      onExit: (_) => setState(() => _hoveredItems[buttonKey] = false),
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(
+          begin: 1.0,
+          end: _hoveredItems[buttonKey] == true ? 1.1 : 1.0,
+        ),
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, child) {
+          return Transform.scale(
+            scale: value,
+            child: child,
+          );
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: themeProvider.cardBackground.withOpacity(0.3),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: _hoveredItems[buttonKey] == true
+                    ? color.withOpacity(0.3)
+                    : Colors.black.withOpacity(0.1),
+                blurRadius: _hoveredItems[buttonKey] == true ? 8 : 4,
+                spreadRadius: _hoveredItems[buttonKey] == true ? 1 : 0,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        shape: const CircleBorder(),
-        child: InkWell(
-          onTap: onPressed,
-          customBorder: const CircleBorder(),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: FaIcon(
-              icon, 
-              color: Colors.white,
-              size: 22,
+          child: Material(
+            color: Colors.transparent,
+            shape: const CircleBorder(),
+            child: InkWell(
+              onTap: onPressed,
+              customBorder: const CircleBorder(),
+              hoverColor: color.withOpacity(0.2),
+              splashColor: color.withOpacity(0.3),
+              highlightColor: color.withOpacity(0.1),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: FaIcon(
+                  icon, 
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
             ),
           ),
         ),
@@ -554,80 +673,86 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildSocialLoginSection(ThemeProvider themeProvider) {
-    return Column(
-      children: [
-        Text(
-          'Or sign in with',
-          style: themeProvider.bodyMedium.copyWith(
-            color: themeProvider.secondaryTextColor,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Column(
           children: [
-            _buildSocialButton(
-              icon: FontAwesomeIcons.google,
-              color: Colors.red,
-              label: 'Google',
-              themeProvider: themeProvider,
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Google sign-in coming soon'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
+            Text(
+              'Or sign in with',
+              style: themeProvider.bodyMedium.copyWith(
+                color: themeProvider.secondaryTextColor,
+              ),
             ),
-            const SizedBox(width: 16),
-            _buildSocialButton(
-              icon: FontAwesomeIcons.apple,
-              color: Colors.white,
-              label: 'Apple',
-              themeProvider: themeProvider,
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Apple sign-in coming soon'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-            ),
-            const SizedBox(width: 16),
-            _buildSocialButton(
-              icon: FontAwesomeIcons.facebook,
-              color: Colors.blue.shade600,
-              label: 'Facebook',
-              themeProvider: themeProvider,
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Facebook sign-in coming soon'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-            ),
-            const SizedBox(width: 16),
-            _buildSocialButton(
-              icon: FontAwesomeIcons.linkedin,
-              color: Colors.blue,
-              label: 'LinkedIn',
-              themeProvider: themeProvider,
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('LinkedIn sign-in coming soon'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildSocialButton(
+                  icon: FontAwesomeIcons.google,
+                  color: Colors.red,
+                  label: 'Google',
+                  themeProvider: themeProvider,
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Google sign-in coming soon'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 16),
+                _buildSocialButton(
+                  icon: FontAwesomeIcons.apple,
+                  color: Colors.white,
+                  label: 'Apple',
+                  themeProvider: themeProvider,
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Apple sign-in coming soon'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 16),
+                _buildSocialButton(
+                  icon: FontAwesomeIcons.facebook,
+                  color: Colors.blue.shade600,
+                  label: 'Facebook',
+                  themeProvider: themeProvider,
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Facebook sign-in coming soon'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(width: 16),
+                _buildSocialButton(
+                  icon: FontAwesomeIcons.linkedin,
+                  color: Colors.blue,
+                  label: 'LinkedIn',
+                  themeProvider: themeProvider,
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('LinkedIn sign-in coming soon'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
           ],
         ),
-      ],
+      ),
     );
   }
 }

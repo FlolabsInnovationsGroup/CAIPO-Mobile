@@ -479,13 +479,30 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: isDarkMode 
-            ? Colors.black.withOpacity(0.3)
-            : Colors.black.withOpacity(0.2),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: isDarkMode 
+              ? [
+                  Colors.black.withOpacity(0.1),
+                  Colors.black.withOpacity(0.3),
+                ]
+              : [
+                  Colors.black.withOpacity(0.1),
+                  Colors.black.withOpacity(0.2),
+                ],
+        ),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(20),
           topRight: Radius.circular(20),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -499,17 +516,35 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
               decoration: BoxDecoration(
                 color: Colors.green.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.green.withOpacity(0.2),
+                    blurRadius: 8,
+                    spreadRadius: 0,
+                  ),
+                ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(
-                    Icons.check_circle,
-                    color: Colors.green,
-                    size: 20,
+                children: [
+                  TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0.0, end: 1.0),
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.elasticOut,
+                    builder: (context, value, child) {
+                      return Transform.scale(
+                        scale: value,
+                        child: child,
+                      );
+                    },
+                    child: const Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
+                      size: 20,
+                    ),
                   ),
-                  SizedBox(width: 8),
-                  Text(
+                  const SizedBox(width: 8),
+                  const Text(
                     'AI preferences saved successfully!',
                     style: TextStyle(
                       color: Colors.green,
@@ -529,37 +564,52 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
           Row(
             children: [
               Expanded(
-                child: ElevatedButton(
-                  onPressed: _haveUnsavedChanges && !_isProcessing 
-                      ? _savePreferences 
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    backgroundColor: Colors.blueAccent,
-                    disabledBackgroundColor: Colors.blueAccent.withOpacity(0.5),
-                  ),
-                  child: _isProcessing
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Text(
-                          'Save Preferences',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white.withOpacity(
-                              _haveUnsavedChanges ? 1.0 : 0.7,
-                            ),
-                          ),
+                child: MouseRegion(
+                  onEnter: (_) => setState(() => _hoverStates['save_button'] = true),
+                  onExit: (_) => setState(() => _hoverStates['save_button'] = false),
+                  child: AnimatedContainer(
+                    duration: themeProvider.animationDurationShort,
+                    transform: _hoverStates['save_button'] == true && _haveUnsavedChanges && !_isProcessing
+                        ? (Matrix4.identity()..scale(1.02))
+                        : Matrix4.identity(),
+                    child: ElevatedButton(
+                      onPressed: _haveUnsavedChanges && !_isProcessing 
+                          ? _savePreferences 
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
+                        backgroundColor: Colors.blueAccent,
+                        disabledBackgroundColor: Colors.blueAccent.withOpacity(0.5),
+                        elevation: _hoverStates['save_button'] == true && _haveUnsavedChanges && !_isProcessing ? 8 : 4,
+                        shadowColor: Colors.blueAccent.withOpacity(
+                          _hoverStates['save_button'] == true && _haveUnsavedChanges && !_isProcessing ? 0.4 : 0.2
+                        ),
+                      ),
+                      child: _isProcessing
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              'Save Preferences',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white.withOpacity(
+                                  _haveUnsavedChanges ? 1.0 : 0.7,
+                                ),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -570,32 +620,57 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
   }
 
   Widget _buildSectionHeader(String title, IconData icon, ThemeProvider themeProvider) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8.0, 16.0, 8.0, 8.0),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 16,
-            color: Colors.blueAccent,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: themeProvider.bodyLarge.copyWith(
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-              shadows: [
-                Shadow(
-                  color: Colors.black.withOpacity(0.3),
-                  offset: const Offset(0, 1),
-                  blurRadius: 2,
-                ),
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(0, 16.0, 0, 8.0),
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.blueAccent.withOpacity(0.2),
+                Colors.blueAccent.withOpacity(0.05),
               ],
-              letterSpacing: 0.5,
             ),
+            borderRadius: BorderRadius.circular(10),
           ),
-        ],
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blueAccent.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: 16,
+                  color: Colors.blueAccent,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: themeProvider.bodyLarge.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black.withOpacity(0.3),
+                      offset: const Offset(0, 1),
+                      blurRadius: 2,
+                    ),
+                  ],
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -609,48 +684,80 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
     required bool isDarkMode,
     required ThemeProvider themeProvider,
   }) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 6.0),
-      elevation: isDarkMode ? 0 : 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: isDarkMode 
-          ? Colors.black.withOpacity(0.3)
-          : Colors.black.withOpacity(0.2),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-        child: ListTile(
-          leading: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: value 
-                  ? Colors.blueAccent.withOpacity(0.1)
-                  : Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+    final String tileKey = 'switch_${title.toLowerCase().replaceAll(' ', '_')}';
+    final bool isHovered = _hoverStates[tileKey] ?? false;
+    
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hoverStates[tileKey] = true),
+      onExit: (_) => setState(() => _hoverStates[tileKey] = false),
+      child: AnimatedContainer(
+        duration: themeProvider.animationDurationShort,
+        margin: const EdgeInsets.symmetric(vertical: 6.0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: isHovered ? [
+            BoxShadow(
+              color: Colors.blueAccent.withOpacity(0.2),
+              blurRadius: 8,
+              spreadRadius: 1,
+              offset: const Offset(0, 2),
             ),
-            child: Icon(
-              icon,
-              color: value ? Colors.blueAccent : Colors.white,
-              size: 24,
+          ] : [],
+        ),
+        child: Card(
+          elevation: isHovered ? 4 : (isDarkMode ? 0 : 1),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          color: isDarkMode 
+              ? (isHovered ? Colors.black.withOpacity(0.4) : Colors.black.withOpacity(0.3))
+              : (isHovered ? Colors.black.withOpacity(0.25) : Colors.black.withOpacity(0.2)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+            child: ListTile(
+              leading: AnimatedContainer(
+                duration: themeProvider.animationDurationShort,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: value 
+                      ? (isHovered ? Colors.blueAccent.withOpacity(0.2) : Colors.blueAccent.withOpacity(0.1))
+                      : (isHovered ? Colors.white.withOpacity(0.15) : Colors.white.withOpacity(0.1)),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: isHovered && value ? [
+                    BoxShadow(
+                      color: Colors.blueAccent.withOpacity(0.2),
+                      blurRadius: 4,
+                      spreadRadius: 0,
+                    ),
+                  ] : [],
+                ),
+                child: Icon(
+                  icon,
+                  color: value ? Colors.blueAccent : Colors.white,
+                  size: 24,
+                ),
+              ),
+              title: Text(
+                title,
+                style: themeProvider.bodyLarge.copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
+              ),
+              subtitle: Text(
+                subtitle,
+                style: themeProvider.bodyMedium.copyWith(
+                  color: Colors.white.withOpacity(isHovered ? 0.8 : 0.7),
+                ),
+              ),
+              trailing: Transform.scale(
+                scale: isHovered ? 1.1 : 1.0,
+                child: Switch(
+                  value: value,
+                  onChanged: onChanged,
+                  activeColor: Colors.blueAccent,
+                  activeTrackColor: Colors.blueAccent.withOpacity(0.3),
+                ),
+              ),
             ),
-          ),
-          title: Text(
-            title,
-            style: themeProvider.bodyLarge.copyWith(
-              fontWeight: FontWeight.w500,
-              color: Colors.white,
-            ),
-          ),
-          subtitle: Text(
-            subtitle,
-            style: themeProvider.bodyMedium.copyWith(
-              color: Colors.white.withOpacity(0.7),
-            ),
-          ),
-          trailing: Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: Colors.blueAccent,
-            activeTrackColor: Colors.blueAccent.withOpacity(0.3),
           ),
         ),
       ),
@@ -658,95 +765,154 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
   }
   
   Widget _buildProcessingSpeedCard(bool isDarkMode, ThemeProvider themeProvider) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: isDarkMode 
-          ? Colors.black.withOpacity(0.3)
-          : Colors.black.withOpacity(0.2),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.blueAccent.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.speed,
-                    color: Colors.blueAccent,
-                    size: 24,
-                  ),
+    final String cardKey = 'processing_speed_card';
+    final bool isHovered = _hoverStates[cardKey] ?? false;
+    
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: MouseRegion(
+          onEnter: (_) => setState(() => _hoverStates[cardKey] = true),
+          onExit: (_) => setState(() => _hoverStates[cardKey] = false),
+          child: AnimatedContainer(
+            duration: themeProvider.animationDurationShort,
+            margin: const EdgeInsets.symmetric(vertical: 8.0),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: isHovered ? [
+                BoxShadow(
+                  color: Colors.blueAccent.withOpacity(0.2),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 2),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Processing Speed',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        'Adjust how quickly the AI processes and responds',
-                        style: themeProvider.bodyMedium.copyWith(
-                          color: Colors.white.withOpacity(0.7),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ] : [],
             ),
-            const SizedBox(height: 16),
-            Slider(
-              value: responseSpeed,
-              min: 0.1,
-              max: 1.0,
-              divisions: 9,
-              label: "${(responseSpeed * 100).toInt()}%",
-              onChanged: (value) => _updateSetting('speed', value),
-              activeColor: Colors.blueAccent,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
+            child: Card(
+              elevation: isHovered ? 4 : 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              color: isDarkMode 
+                  ? (isHovered ? Colors.black.withOpacity(0.4) : Colors.black.withOpacity(0.3))
+                  : (isHovered ? Colors.black.withOpacity(0.25) : Colors.black.withOpacity(0.2)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.date_range, size: 14, color: Colors.white70),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Thorough',
-                      style: themeProvider.bodyMedium.copyWith(
-                        color: Colors.white.withOpacity(0.7),
+                    Row(
+                      children: [
+                        AnimatedContainer(
+                          duration: themeProvider.animationDurationShort,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: isHovered 
+                                ? Colors.blueAccent.withOpacity(0.2)
+                                : Colors.blueAccent.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: isHovered ? [
+                              BoxShadow(
+                                color: Colors.blueAccent.withOpacity(0.2),
+                                blurRadius: 4,
+                                spreadRadius: 0,
+                              ),
+                            ] : [],
+                          ),
+                          child: const Icon(
+                            Icons.speed,
+                            color: Colors.blueAccent,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Processing Speed',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              Text(
+                                'Adjust how quickly the AI processes and responds',
+                                style: themeProvider.bodyMedium.copyWith(
+                                  color: Colors.white.withOpacity(isHovered ? 0.8 : 0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    SliderTheme(
+                      data: SliderThemeData(
+                        trackHeight: 4,
+                        activeTrackColor: Colors.blueAccent,
+                        inactiveTrackColor: Colors.blueAccent.withOpacity(0.2),
+                        thumbColor: Colors.white,
+                        overlayColor: Colors.blueAccent.withOpacity(0.2),
+                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                        overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+                      ),
+                      child: Slider(
+                        value: responseSpeed,
+                        min: 0.1,
+                        max: 1.0,
+                        divisions: 9,
+                        label: "${(responseSpeed * 100).toInt()}%",
+                        onChanged: (value) => _updateSetting('speed', value),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.date_range, 
+                                size: 14, 
+                                color: isHovered ? Colors.white.withOpacity(0.9) : Colors.white70,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Thorough',
+                                style: themeProvider.bodyMedium.copyWith(
+                                  color: isHovered ? Colors.white.withOpacity(0.9) : Colors.white.withOpacity(0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.bolt, 
+                                size: 14, 
+                                color: isHovered ? Colors.white.withOpacity(0.9) : Colors.white70,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Speedy',
+                                style: themeProvider.bodyMedium.copyWith(
+                                  color: isHovered ? Colors.white.withOpacity(0.9) : Colors.white.withOpacity(0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-                Row(
-                  children: [
-                    const Icon(Icons.bolt, size: 14, color: Colors.white70),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Speedy',
-                      style: themeProvider.bodyMedium.copyWith(
-                        color: Colors.white.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -1015,225 +1181,300 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
   }
 
   Widget _buildDialectOptions(bool isDarkMode, ThemeProvider themeProvider) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Select Dialect',
-          style: themeProvider.bodyMedium.copyWith(
-            color: themeProvider.secondaryTextColor,
-            fontWeight: FontWeight.w500,
+    return AnimatedOpacity(
+      opacity: useDialect ? 1.0 : 0.7,
+      duration: themeProvider.animationDurationShort,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Select Dialect',
+            style: themeProvider.bodyMedium.copyWith(
+              color: themeProvider.secondaryTextColor,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: _englishDialects.map((dialect) {
-            final isSelected = selectedDialect == dialect;
-            final hoverKey = 'dialect_$dialect';
-            final isHovering = _hoverStates[hoverKey] ?? false;
-            
-            return MouseRegion(
-              onEnter: (_) => setState(() => _hoverStates[hoverKey] = true),
-              onExit: (_) => setState(() => _hoverStates[hoverKey] = false),
-              child: GestureDetector(
-                onTap: () => _updateSetting('dialectType', dialect),
-                child: AnimatedContainer(
-                  duration: themeProvider.animationDurationShort,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? themeProvider.accentColor.withOpacity(0.2)
-                        : isHovering
-                            ? themeProvider.secondaryTextColor.withOpacity(0.1)
-                            : themeProvider.secondaryTextColor.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
-                    border: Border.all(
-                      color: isSelected
-                          ? themeProvider.accentColor
-                          : isHovering
-                              ? themeProvider.accentColor.withOpacity(0.3)
-                              : Colors.transparent,
-                      width: 1.5,
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: _englishDialects.map((dialect) {
+              final isSelected = selectedDialect == dialect;
+              final hoverKey = 'dialect_$dialect';
+              final isHovering = _hoverStates[hoverKey] ?? false;
+              
+              return MouseRegion(
+                onEnter: (_) => setState(() => _hoverStates[hoverKey] = true),
+                onExit: (_) => setState(() => _hoverStates[hoverKey] = false),
+                child: GestureDetector(
+                  onTap: () => _updateSetting('dialectType', dialect),
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween<double>(
+                      begin: 1.0,
+                      end: isHovering ? 1.05 : 1.0,
                     ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.language,
-                        size: 16,
-                        color: isSelected
-                            ? themeProvider.accentColor
-                            : themeProvider.secondaryIconColor,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        dialect,
-                        style: themeProvider.bodyMedium.copyWith(
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          color: isSelected
-                              ? themeProvider.accentColor
-                              : themeProvider.primaryTextColor,
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, scale, child) {
+                      return Transform.scale(
+                        scale: scale,
+                        child: AnimatedContainer(
+                          duration: themeProvider.animationDurationShort,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? themeProvider.accentColor.withOpacity(isHovering ? 0.3 : 0.2)
+                                : isHovering
+                                    ? themeProvider.secondaryTextColor.withOpacity(0.15)
+                                    : themeProvider.secondaryTextColor.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+                            border: Border.all(
+                              color: isSelected
+                                  ? themeProvider.accentColor
+                                  : isHovering
+                                      ? themeProvider.accentColor.withOpacity(0.3)
+                                      : Colors.transparent,
+                              width: 1.5,
+                            ),
+                            boxShadow: isHovering || isSelected ? [
+                              BoxShadow(
+                                color: isSelected
+                                    ? themeProvider.accentColor.withOpacity(0.2)
+                                    : Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                spreadRadius: 0,
+                                offset: const Offset(0, 2),
+                              ),
+                            ] : [],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              AnimatedContainer(
+                                duration: themeProvider.animationDurationShort,
+                                padding: EdgeInsets.all(isSelected || isHovering ? 4 : 0),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? themeProvider.accentColor.withOpacity(0.2)
+                                      : Colors.transparent,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.language,
+                                  size: 16,
+                                  color: isSelected
+                                      ? themeProvider.accentColor
+                                      : themeProvider.secondaryIconColor,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                dialect,
+                                style: themeProvider.bodyMedium.copyWith(
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  color: isSelected
+                                      ? themeProvider.accentColor
+                                      : themeProvider.primaryTextColor,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildAIModelSelector(bool isDarkMode, ThemeProvider themeProvider) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: isDarkMode 
-          ? Colors.black.withOpacity(0.3)
-          : Colors.black.withOpacity(0.2),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Card(
+          margin: const EdgeInsets.symmetric(vertical: 8.0),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          color: isDarkMode 
+              ? Colors.black.withOpacity(0.3)
+              : Colors.black.withOpacity(0.2),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.blueAccent.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.memory,
-                    color: Colors.blueAccent,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'AI Model',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.white,
-                        ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.blueAccent.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      Text(
-                        'Choose which AI model to use',
-                        style: themeProvider.bodyMedium.copyWith(
-                          color: Colors.white.withOpacity(0.7),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: _aiModels.map((model) {
-                final isSelected = model == selectedAIModel;
-                return GestureDetector(
-                  onTap: () => _updateSetting('aiModel', model),
-                  child: Container(
-                    width: 95,
-                    padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? Colors.blueAccent.withOpacity(0.2)
-                          : Colors.white.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isSelected
-                            ? Colors.blueAccent
-                            : Colors.transparent,
-                        width: 2,
+                      child: const Icon(
+                        Icons.memory,
+                        color: Colors.blueAccent,
+                        size: 24,
                       ),
                     ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'AI Model',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            'Choose which AI model to use',
+                            style: themeProvider.bodyMedium.copyWith(
+                              color: Colors.white.withOpacity(0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: _aiModels.map((model) {
+                    final isSelected = model == selectedAIModel;
+                    final modelKey = 'model_${model.toLowerCase()}';
+                    final isHovered = _hoverStates[modelKey] ?? false;
+                    
+                    return MouseRegion(
+                      onEnter: (_) => setState(() => _hoverStates[modelKey] = true),
+                      onExit: (_) => setState(() => _hoverStates[modelKey] = false),
+                      child: GestureDetector(
+                        onTap: () => _updateSetting('aiModel', model),
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween<double>(
+                            begin: 1.0,
+                            end: isHovered ? 1.05 : 1.0,
+                          ),
+                          duration: const Duration(milliseconds: 200),
+                          builder: (context, scale, child) {
+                            return Transform.scale(
+                              scale: scale,
+                              child: AnimatedContainer(
+                                duration: themeProvider.animationDurationShort,
+                                width: 95,
+                                padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? Colors.blueAccent.withOpacity(isHovered ? 0.3 : 0.2)
+                                      : Colors.white.withOpacity(isHovered ? 0.1 : 0.05),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? Colors.blueAccent
+                                        : isHovered 
+                                            ? Colors.blueAccent.withOpacity(0.3)
+                                            : Colors.transparent,
+                                    width: 2,
+                                  ),
+                                  boxShadow: isHovered ? [
+                                    BoxShadow(
+                                      color: isSelected 
+                                          ? Colors.blueAccent.withOpacity(0.3)
+                                          : Colors.black.withOpacity(0.1),
+                                      blurRadius: 8,
+                                      spreadRadius: 1,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ] : [],
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      model == 'Standard'
+                                          ? Icons.check_circle_outline
+                                          : model == 'Advanced'
+                                              ? Icons.auto_awesome
+                                              : Icons.science,
+                                      color: isSelected ? Colors.blueAccent : Colors.white70,
+                                      size: 24,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      model,
+                                      textAlign: TextAlign.center,
+                                      style: themeProvider.bodyMedium.copyWith(
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        color: isSelected ? Colors.blueAccent : Colors.white70,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 12),
+                if (selectedAIModel != 'Standard') ...[
+                  Container(
+                    padding: const EdgeInsets.all(8.0),
+                    decoration: BoxDecoration(
+                      color: selectedAIModel == 'Experimental'
+                          ? Colors.orange.withOpacity(0.1)
+                          : Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: selectedAIModel == 'Experimental'
+                            ? Colors.orange.withOpacity(0.3)
+                            : Colors.blue.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
                       children: [
                         Icon(
-                          model == 'Standard'
-                              ? Icons.check_circle_outline
-                              : model == 'Advanced'
-                                  ? Icons.auto_awesome
-                                  : Icons.science,
-                          color: isSelected ? Colors.blueAccent : Colors.white70,
-                          size: 24,
+                          Icons.info_outline,
+                          size: 16,
+                          color: selectedAIModel == 'Experimental'
+                              ? Colors.orange
+                              : Colors.blue,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          model,
-                          textAlign: TextAlign.center,
-                          style: themeProvider.bodyMedium.copyWith(
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            color: isSelected ? Colors.blueAccent : Colors.white70,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            selectedAIModel == 'Experimental'
+                                ? 'Experimental model may have unexpected behavior'
+                                : 'Advanced model uses more resources but gives better results',
+                            style: themeProvider.bodyMedium.copyWith(
+                              color: selectedAIModel == 'Experimental'
+                                  ? Colors.orange
+                                  : Colors.blue,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                );
-              }).toList(),
+                ],
+              ],
             ),
-            const SizedBox(height: 12),
-            if (selectedAIModel != 'Standard') ...[
-              Container(
-                padding: const EdgeInsets.all(8.0),
-                decoration: BoxDecoration(
-                  color: selectedAIModel == 'Experimental'
-                      ? Colors.orange.withOpacity(0.1)
-                      : Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: selectedAIModel == 'Experimental'
-                        ? Colors.orange.withOpacity(0.3)
-                        : Colors.blue.withOpacity(0.3),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      size: 16,
-                      color: selectedAIModel == 'Experimental'
-                          ? Colors.orange
-                          : Colors.blue,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        selectedAIModel == 'Experimental'
-                            ? 'Experimental model may have unexpected behavior'
-                            : 'Advanced model uses more resources but gives better results',
-                        style: themeProvider.bodyMedium.copyWith(
-                          color: selectedAIModel == 'Experimental'
-                              ? Colors.orange
-                              : Colors.blue,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
+          ),
         ),
       ),
     );
