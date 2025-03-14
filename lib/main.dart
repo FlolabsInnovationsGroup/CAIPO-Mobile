@@ -14,6 +14,7 @@ import 'presentation/screens/support/onboarding_screen.dart';
 import 'presentation/screens/home/recording_screen.dart';
 import 'presentation/screens/ai/transcription_screen.dart';
 import 'presentation/screens/splash/splash_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // Global key for navigator to use in error handling
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -91,7 +92,7 @@ class MyApp extends StatelessWidget {
       darkTheme: themeProvider.getThemeData(true),
       themeMode: themeProvider.themeMode,
       navigatorKey: navigatorKey,
-      home: const SplashScreen(),
+      home: _buildHomeBasedOnAuth(),
       routes: {
         '/onboarding': (context) => const OnboardingScreen(),
         '/welcome': (context) => const WelcomeScreen(),
@@ -105,11 +106,24 @@ class MyApp extends StatelessWidget {
         // Apply font scaling for accessibility
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
-            textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(0.85, 1.3),
+            textScaler: TextScaler.linear(MediaQuery.of(context).textScaleFactor.clamp(0.85, 1.3)),
           ),
           child: child!,
         );
       },
     );
+  }
+  
+  Widget _buildHomeBasedOnAuth() {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      // User is already signed in, go directly to home
+      debugPrint('User is already signed in: ${currentUser.uid}');
+      return const HomeScreen();
+    } else {
+      // No user signed in, show splash screen
+      debugPrint('No user signed in, showing splash screen');
+      return const SplashScreen();
+    }
   }
 } 

@@ -188,7 +188,7 @@ class _OpenAIScreenState extends State<OpenAIScreen> with SingleTickerProviderSt
       // Show a snackbar
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Response copied to clipboard'),
+          content: const Text('Response copied to clipboard'),
           backgroundColor: Theme.of(context).colorScheme.secondary,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -245,9 +245,9 @@ class _OpenAIScreenState extends State<OpenAIScreen> with SingleTickerProviderSt
                       return ScaleTransition(scale: animation, child: child);
                     },
                     child: _hasCopied
-                        ? Icon(
+                        ? const Icon(
                             Icons.check_circle,
-                            key: const ValueKey('check'),
+                            key: ValueKey('check'),
                             color: Colors.green,
                           )
                         : Icon(

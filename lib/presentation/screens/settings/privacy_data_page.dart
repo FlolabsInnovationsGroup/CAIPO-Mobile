@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter/cupertino.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/gradient_scaffold.dart';
 import '../../widgets/base_screen.dart';
@@ -596,7 +595,7 @@ class _PrivacyDataPageState extends State<PrivacyDataPage> with TickerProviderSt
               );
             },
           );
-        }).toList(),
+        }),
         
         const SizedBox(height: 20),
         
@@ -760,7 +759,7 @@ class _PrivacyDataPageState extends State<PrivacyDataPage> with TickerProviderSt
                     );
                   },
                 );
-              }).toList(),
+              }),
               
               const SizedBox(height: 20),
               
@@ -1585,15 +1584,15 @@ class _PrivacyDataPageState extends State<PrivacyDataPage> with TickerProviderSt
           // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Row(
+              content: const Row(
                 children: [
-                  const Icon(Icons.check_circle, color: Colors.green),
-                  const SizedBox(width: 12),
+                  Icon(Icons.check_circle, color: Colors.green),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
+                      children: [
                         Text('Data Export Complete', style: TextStyle(fontWeight: FontWeight.bold)),
                         Text('Your data has been exported to Downloads folder', style: TextStyle(fontSize: 12)),
                       ],
@@ -1618,7 +1617,7 @@ class _PrivacyDataPageState extends State<PrivacyDataPage> with TickerProviderSt
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.warning_amber, color: Colors.red, size: 24),
+            const Icon(Icons.warning_amber, color: Colors.red, size: 24),
             const SizedBox(width: 8),
             Expanded(
               child: Text(

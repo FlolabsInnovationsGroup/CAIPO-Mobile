@@ -1,0 +1,77 @@
+<invoke name="list_dir">
+<parameter name="explanation">Looking for the audio_waveforms plugin configuration in the project.</parameter>
+<parameter name="relative_workspace_path">.</parameter>
+</invoke>
+
+<invoke name="read_file">
+<parameter name="explanation">Reading the pubspec.yaml to check the audio_waveforms dependency version.</parameter>
+<parameter name="target_file">pubspec.yaml</parameter>
+<parameter name="should_read_entire_file">true</parameter>
+<parameter name="start_line_one_indexed">1</parameter>
+<parameter name="end_line_one_indexed_inclusive">100</parameter>
+</invoke>
+
+<invoke name="list_dir">
+<parameter name="explanation">Looking for the audio_waveforms plugin's build.gradle file.</parameter>
+<parameter name="relative_workspace_path">.flutter-plugins-dependencies</parameter>
+</invoke>
+
+<invoke name="read_file">
+<parameter name="explanation">Reading the root build.gradle to check plugin configuration.</parameter>
+<parameter name="target_file">android/build.gradle</parameter>
+<parameter name="should_read_entire_file">true</parameter>
+<parameter name="start_line_one_indexed">1</parameter>
+<parameter name="end_line_one_indexed_inclusive">100</parameter>
+</invoke>
+
+<invoke name="edit_file">
+<parameter name="target_file">android/build.gradle</parameter>
+<parameter name="instructions">I will add the android plugin to the buildscript dependencies to ensure it's available for all subprojects.</parameter>
+<parameter name="code_edit">buildscript {
+    ext.kotlin_version = '1.7.10'
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.3.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.google.gms:google-services:4.3.15'
+        classpath 'com.google.firebase:firebase-crashlytics-gradle:2.9.9'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.buildDir = '../build'
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+    project.evaluationDependsOn(':app')
+    
+    afterEvaluate {
+        if (project.hasProperty('android')) {
+            android {
+                compileSdkVersion flutter.compileSdkVersion
+                
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_1_8
+                    targetCompatibility JavaVersion.VERSION_1_8
+                }
+            }
+        }
+    }
+}
+
+gradle.projectsEvaluated {
+    tasks.withType(JavaCompile) {
+        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+    }
+}
+</parameter>
+</invoke> 

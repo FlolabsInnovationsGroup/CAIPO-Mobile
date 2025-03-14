@@ -1,18 +1,16 @@
 buildscript {
-    ext.kotlin_version = '2.1.0'
+    ext.kotlin_version = '1.8.20'
+    ext.gradle_version = '8.2.0'
     repositories {
         google()
         mavenCentral()
-        maven {
-            url 'https://storage.googleapis.com/download.flutter.io'
-        }
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.2'
-        classpath 'com.google.gms:google-services:4.4.0'
-        classpath 'com.google.firebase:firebase-crashlytics-gradle:2.9.9'
+        classpath 'com.android.tools.build:gradle:8.2.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.google.gms:google-services:4.4.1'
+        classpath 'com.google.firebase:firebase-crashlytics-gradle:2.9.9'
     }
 }
 
@@ -26,7 +24,16 @@ allprojects {
 rootProject.buildDir = '../build'
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
-    project.evaluationDependsOn(':app')
+    afterEvaluate {
+        if (project.hasProperty("android")) {
+            android {
+                buildToolsVersion "34.0.0"
+                tasks.withType(JavaCompile).configureEach {
+                    options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+                }
+            }
+        }
+    }
 }
 
 tasks.register("clean", Delete) {

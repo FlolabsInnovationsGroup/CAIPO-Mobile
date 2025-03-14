@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "523970252754-nlhvb67tnjsn7f0e7pbdh6ac2212dch7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.flomadlabs.caipoappv0",
+            "certificate_hash": "b7ecdb23e14c383b4b91f0df720198db36e5ec6a"
+          }
+        },
+        {
           "client_id": "523970252754-itgqfajnln8go2oht0jp07h9i5kk8jt6.apps.googleusercontent.com",
           "client_type": 3
         }

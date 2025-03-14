@@ -8,12 +8,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../core/firebase_options.dart';
+import 'auth_service.dart';
 
 class FirebaseService {
   static bool _initialized = false;
   static final FirebaseAuth _auth = FirebaseAuth.instance;
   static final GoogleSignIn _googleSignIn = GoogleSignIn();
   static bool _firestoreAvailable = false;
+  static late final AuthService _authService;
   
   static Future<void> initialize() async {
     if (_isFirebaseSupported()) {
@@ -22,6 +24,7 @@ class FirebaseService {
           options: DefaultFirebaseOptions.currentPlatform,
         );
         _initialized = true;
+        _authService = AuthService();
         developer.log("Firebase initialized successfully", name: "FirebaseService", error: _getPlatformName());
         
         // Check if Firestore is available
@@ -143,19 +146,15 @@ class FirebaseService {
   }
   
   static Future<UserCredential?> signInWithGoogle() async {
+    if (!_initialized) {
+      developer.log("Firebase not initialized", name: "FirebaseService");
+      return null;
+    }
+    
     try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null;
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      return await _auth.signInWithCredential(credential);
+      return await _authService.signInWithGoogle();
     } catch (e) {
-      debugPrint('Error signing in with Google: $e');
+      developer.log('Error signing in with Google', name: "FirebaseService", error: "$e");
       return null;
     }
   }
@@ -163,12 +162,9 @@ class FirebaseService {
   static Future<void> signOut() async {
     if (!_isFirebaseSupported()) return;
     try {
-      await Future.wait([
-        _auth.signOut(),
-        _googleSignIn.signOut(),
-      ]);
+      await _authService.signOut();
     } catch (e) {
-      debugPrint('Error signing out: $e');
+      developer.log('Error signing out', name: "FirebaseService", error: "$e");
     }
   }
   

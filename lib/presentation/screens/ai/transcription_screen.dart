@@ -1,15 +1,9 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_sound/flutter_sound.dart';
-import 'package:flutter_sound_platform_interface/flutter_sound_recorder_platform_interface.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/gradient_scaffold.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 class TranscriptionScreen extends StatefulWidget {
@@ -282,7 +276,7 @@ class TranscriptionScreenState extends State<TranscriptionScreen> with SingleTic
     // For now, we'll just show a snackbar
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Export functionality will be implemented soon'),
+        content: const Text('Export functionality will be implemented soon'),
         backgroundColor: Theme.of(context).colorScheme.secondary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
@@ -299,7 +293,7 @@ class TranscriptionScreenState extends State<TranscriptionScreen> with SingleTic
     // For now, we'll just show a snackbar
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('File picker functionality will be implemented soon'),
+        content: const Text('File picker functionality will be implemented soon'),
         backgroundColor: Theme.of(context).colorScheme.secondary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
@@ -535,7 +529,7 @@ class TranscriptionScreenState extends State<TranscriptionScreen> with SingleTic
         ? widget.audioFilePath.split('/').last
         : 'No file selected';
     
-    final String playerKey = 'audio_player';
+    const String playerKey = 'audio_player';
     final bool isHovered = _hoverStates[playerKey] ?? false;
     
     return MouseRegion(
@@ -710,7 +704,7 @@ class TranscriptionScreenState extends State<TranscriptionScreen> with SingleTic
   }
 
   Widget _buildLanguageSelector(bool isDarkMode, ThemeProvider themeProvider) {
-    final String selectorKey = 'language_selector';
+    const String selectorKey = 'language_selector';
     final bool isHovered = _hoverStates[selectorKey] ?? false;
     
     return SlideTransition(
@@ -1211,9 +1205,9 @@ class TranscriptionScreenState extends State<TranscriptionScreen> with SingleTic
                                       return ScaleTransition(scale: animation, child: child);
                                     },
                                     child: _hasCopied
-                                        ? Icon(
+                                        ? const Icon(
                                             Icons.check_circle,
-                                            key: const ValueKey('check'),
+                                            key: ValueKey('check'),
                                             color: Colors.green,
                                           )
                                         : Icon(
