@@ -252,7 +252,7 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Tick
                         color: Colors.blue.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(themeProvider.borderRadius),
                       ),
-                      child: Icon(
+                      child: const Icon(
                         Icons.info_outline,
                         color: Colors.blue,
                         size: 24,
@@ -1331,7 +1331,7 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Tick
                       ),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Center(
+              child: const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -1340,7 +1340,7 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Tick
                       size: 40,
                       color: Colors.white,
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Text(
                       'Theme Preview',
                       style: TextStyle(
@@ -1670,7 +1670,7 @@ class _AppearanceDisplayPageState extends State<AppearanceDisplayPage> with Tick
                           ),
                         ],
                       ),
-                      child: Center(
+                      child: const Center(
                         child: Icon(
                           Icons.animation,
                           color: Colors.white,

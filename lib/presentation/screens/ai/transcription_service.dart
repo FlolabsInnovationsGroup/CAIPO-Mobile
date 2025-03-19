@@ -7,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/gradient_scaffold.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 class TranscriptionScreen extends StatefulWidget {
@@ -116,7 +115,7 @@ class TranscriptionScreenState extends State<TranscriptionScreen> with SingleTic
       // Show a snackbar
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Transcription copied to clipboard'),
+          content: const Text('Transcription copied to clipboard'),
           backgroundColor: Theme.of(context).colorScheme.secondary,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -135,7 +134,7 @@ class TranscriptionScreenState extends State<TranscriptionScreen> with SingleTic
       // For now, we'll just show a snackbar
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Export functionality will be implemented soon'),
+          content: const Text('Export functionality will be implemented soon'),
           backgroundColor: Theme.of(context).colorScheme.secondary,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -194,9 +193,9 @@ class TranscriptionScreenState extends State<TranscriptionScreen> with SingleTic
                           return ScaleTransition(scale: animation, child: child);
                         },
                         child: _hasCopied
-                            ? Icon(
+                            ? const Icon(
                                 Icons.check_circle,
-                                key: const ValueKey('check'),
+                                key: ValueKey('check'),
                                 color: Colors.green,
                               )
                             : Icon(
@@ -596,7 +595,7 @@ class TranscriptionScreenState extends State<TranscriptionScreen> with SingleTic
                       ),
                     ],
                   ),
-                  child: Icon(
+                  child: const Icon(
                     Icons.error_outline,
                     color: Colors.red,
                     size: 48,
@@ -785,9 +784,9 @@ class TranscriptionScreenState extends State<TranscriptionScreen> with SingleTic
                                   return ScaleTransition(scale: animation, child: child);
                                 },
                                 child: _hasCopied
-                                    ? Icon(
+                                    ? const Icon(
                                         Icons.check_circle,
-                                        key: const ValueKey('check'),
+                                        key: ValueKey('check'),
                                         color: Colors.green,
                                       )
                                     : Icon(
@@ -940,7 +939,7 @@ class TranscriptionService {
     
     // Large files take longer to process
     final processingTime = Duration(milliseconds: 5000 + (fileSize ~/ 10000));
-    final totalSteps = 100;
+    const totalSteps = 100;
     
     // Simulate progress updates
     for (int i = 0; i < totalSteps; i++) {

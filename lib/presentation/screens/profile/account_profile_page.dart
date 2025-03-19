@@ -245,11 +245,11 @@ class _AccountProfilePageState extends State<AccountProfilePage> with TickerProv
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Row(
+        title: const Row(
           children: [
             Icon(Icons.logout, color: Colors.red, size: 24),
-            const SizedBox(width: 16),
-            const Text('Sign Out'),
+            SizedBox(width: 16),
+            Text('Sign Out'),
           ],
         ),
         content: const Text('Are you sure you want to sign out? You will need to log in again to access your account.'),
@@ -499,7 +499,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> with TickerProv
                           ),
                           borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
                         ),
-                        child: Icon(
+                        child: const Icon(
                           Icons.info_outline,
                           color: Colors.blue,
                           size: 24,
@@ -1227,7 +1227,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> with TickerProv
                                         ),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
-                                      child: Row(
+                                      child: const Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Icon(
@@ -1235,7 +1235,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> with TickerProv
                                             size: 14,
                                             color: Colors.white,
                                           ),
-                                          const SizedBox(width: 4),
+                                          SizedBox(width: 4),
                                           Text(
                                             'Verified',
                                             style: TextStyle(
@@ -1415,7 +1415,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> with TickerProv
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Name',
               style: TextStyle(
                 fontSize: 14,
@@ -1449,7 +1449,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> with TickerProv
             
             const SizedBox(height: 16),
             
-            Text(
+            const Text(
               'Phone',
               style: TextStyle(
                 fontSize: 14,
@@ -1484,7 +1484,7 @@ class _AccountProfilePageState extends State<AccountProfilePage> with TickerProv
             
             const SizedBox(height: 16),
             
-            Text(
+            const Text(
               'Location',
               style: TextStyle(
                 fontSize: 14,

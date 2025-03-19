@@ -5,6 +5,7 @@ import '../../../data/services/firebase_service.dart';
 import '../../widgets/gradient_scaffold.dart';
 import '../../providers/theme_provider.dart';
 import 'dart:developer' as developer;
+import '../../screens/home/home_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   final bool signUpMode;
@@ -126,22 +127,55 @@ class AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMi
 
     try {
       developer.log('Attempting Google sign-in...', name: "AuthScreen");
-
       final userCredential = await FirebaseService.signInWithGoogle();
-      developer.log('Sign-in result: $userCredential', name: "AuthScreen");
-
-      if (userCredential != null && mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+      
+      developer.log('Google sign-in result: ${userCredential != null ? "Success" : "Failed/Cancelled"}', name: "AuthScreen");
+      
+      if (userCredential != null) {
+        developer.log('User credential obtained, user ID: ${userCredential.user?.uid}', name: "AuthScreen");
+        
+        if (mounted) {
+          developer.log('Widget is mounted, attempting navigation to home screen', name: "AuthScreen");
+          
+          // Use a more direct navigation approach
+          try {
+            // Import the HomeScreen at the top of the file
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
+              (route) => false, // This removes all previous routes
+            );
+            developer.log('Direct navigation to home screen initiated', name: "AuthScreen");
+          } catch (navError) {
+            developer.log('Navigation error: $navError', name: "AuthScreen", error: navError);
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text('Navigation error: $navError'),
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          }
+        } else {
+          developer.log('Widget is not mounted, cannot navigate', name: "AuthScreen");
+        }
       } else {
-        scaffoldMessenger.showSnackBar(
-          const SnackBar(content: Text('Google sign-in was cancelled or failed')),
-        );
+        developer.log('Google sign-in failed or was cancelled', name: "AuthScreen");
+        if (mounted) {
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(
+              content: Text('Google sign-in was cancelled or failed. Please try again.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
       }
     } catch (e) {
-      developer.log('Google sign-in error: $e', name: "AuthScreen");
+      developer.log('Google sign-in error: $e', name: "AuthScreen", error: e);
       if (mounted) {
         scaffoldMessenger.showSnackBar(
-          SnackBar(content: Text('Google sign-in failed: ${e.toString()}')),
+          SnackBar(
+            content: Text('Google sign-in failed: ${e.toString()}'),
+            duration: const Duration(seconds: 3),
+          ),
         );
       }
     } finally {
@@ -429,7 +463,7 @@ class AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMi
               ),
             ),
             child: isLoading 
-                ? SizedBox(
+                ? const SizedBox(
                     width: 24, 
                     height: 24, 
                     child: CircularProgressIndicator(

@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/gradient_scaffold.dart';
 import '../../widgets/base_screen.dart';
-import 'dart:math';
 import 'dart:async';
 
 class AdvancedSettingsPage extends StatefulWidget {
@@ -586,7 +585,7 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Ticker
               color: Colors.orange.withOpacity(0.1),
               borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.warning_amber_rounded,
               color: Colors.orange,
               size: 24,
@@ -887,7 +886,7 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Ticker
                                   ),
                                   child: Row(
                                     children: [
-                                      Icon(
+                                      const Icon(
                                         Icons.info_outline,
                                         color: Colors.blue,
                                         size: 20,
@@ -1141,7 +1140,7 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Ticker
                       ),
                       ElevatedButton.icon(
                         onPressed: haveUnsavedChanges ? _saveSettings : null,
-                        icon: Icon(
+                        icon: const Icon(
                           Icons.save,
                           color: Colors.white,
                           size: 18,
@@ -1164,9 +1163,9 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Ticker
                           ),
                           visualDensity: VisualDensity.comfortable,
                         ).copyWith(
-                          backgroundColor: MaterialStateProperty.resolveWith<Color>(
-                            (Set<MaterialState> states) {
-                              if (states.contains(MaterialState.disabled)) {
+                          backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                            (Set<WidgetState> states) {
+                              if (states.contains(WidgetState.disabled)) {
                                 return Colors.grey.withOpacity(0.2);
                               }
                               return themeProvider.accentColor;
@@ -1618,7 +1617,7 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Ticker
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.refresh,
                           size: 14,
                           color: Colors.orange,
@@ -1698,11 +1697,11 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Ticker
 
     // Show confirmation
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Settings saved successfully'),
+      const SnackBar(
+        content: Text('Settings saved successfully'),
         behavior: SnackBarBehavior.floating,
         backgroundColor: Colors.green,
-        duration: const Duration(seconds: 2),
+        duration: Duration(seconds: 2),
       ),
     );
   }
