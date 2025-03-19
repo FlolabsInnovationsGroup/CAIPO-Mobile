@@ -661,9 +661,9 @@ class ThemeProvider with ChangeNotifier {
       pageTransitionsTheme: PageTransitionsTheme(
         builders: {
           TargetPlatform.android: _useAnimations 
-              ? CupertinoPageTransitionsBuilder() 
-              : FadeUpwardsPageTransitionsBuilder(),
-          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+              ? const CupertinoPageTransitionsBuilder() 
+              : const FadeUpwardsPageTransitionsBuilder(),
+          TargetPlatform.iOS: const CupertinoPageTransitionsBuilder(),
         },
       ),
       tooltipTheme: TooltipThemeData(

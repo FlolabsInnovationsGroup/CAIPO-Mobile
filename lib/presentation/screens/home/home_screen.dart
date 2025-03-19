@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
 import '../../../data/services/openai_service.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/gradient_scaffold.dart';
-import '../../widgets/base_screen.dart';
 import '../../../data/services/firebase_service.dart';
 import '../../widgets/recent_recordings_sheet.dart';
 import '../ai/transcription_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:developer' as developer;
+import '../../../data/services/dynamic_screen_manager.dart';
+import '../../widgets/app_drawer.dart';
+import '../../widgets/quick_actions.dart';
+import 'dart:ui';  // Add this at the top with other imports
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -87,9 +88,14 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return 'Good Evening';
   }
 
+  // Add new variables for dynamic screen support
+  Widget? _currentDynamicScreen;
+  bool _isDynamicMode = false;
+
   @override
   void initState() {
     super.initState();
+    developer.log('HomeScreen initState called', name: 'HomeScreen');
     _initAnimations();
     _loadUserData();
     _messageController.addListener(_onTextChanged);
@@ -104,6 +110,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         "How do I record audio?"
       ]
     );
+    developer.log('HomeScreen initialization completed', name: 'HomeScreen');
   }
   
   void _initAnimations() {
@@ -230,9 +237,20 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  // Add bot message with timestamp and suggestions
+  // Modify _addBotMessage to handle dynamic screen commands
   void _addBotMessage(String message, {List<String>? suggestions, String? imageUrl}) {
     final timestamp = DateTime.now();
+    
+    // Check if message contains a command for dynamic screens
+    final dynamicScreen = DynamicScreenManager.getScreenForCommand(message);
+    if (dynamicScreen != null) {
+      setState(() {
+        _isDynamicMode = true;
+        _currentDynamicScreen = dynamicScreen;
+      });
+      return;
+    }
+    
     setState(() {
       _messages.add({
         'sender': 'AI',
@@ -426,99 +444,135 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
-
-    return GradientScaffold(
-      body: SafeArea(
-        child: Column(
+    if (_isDynamicMode && _currentDynamicScreen != null) {
+      return WillPopScope(
+        onWillPop: () async {
+          _exitDynamicMode();
+          return false;
+        },
+        child: Stack(
           children: [
-            _buildHeader(context),
-            Expanded(
-              child: Stack(
-                children: [
-                  AnimatedBuilder(
-                    animation: _screenAnimationController,
-                    builder: (context, child) {
-                      return Opacity(
-                        opacity: _chatContainerAnimation.value,
-                        child: Transform.translate(
-                          offset: Offset(0, 20 * (1 - _chatContainerAnimation.value)),
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                            decoration: BoxDecoration(
-                              color: isDarkMode ? const Color(0xFF1E1E2E) : Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: isDarkMode ? Colors.black38 : Colors.grey.shade300,
-                                  spreadRadius: 1,
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              children: [
-                                _buildChatHeader(isDarkMode),
-                                Expanded(
-                                  child: _messages.isEmpty && !_isTyping
-                                      ? _buildEmptyState(isDarkMode)
-                                      : _buildMessageList(isDarkMode),
-                                ),
-                                if (_selectedImage != null) _buildImagePreview(),
-                                AnimatedBuilder(
-                                  animation: _screenAnimationController,
-                                  builder: (context, child) {
-                                    return Opacity(
-                                      opacity: _inputFieldAnimation.value,
-                                      child: Transform.translate(
-                                        offset: Offset(0, 20 * (1 - _inputFieldAnimation.value)),
-                                        child: _buildInputField(isDarkMode),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  
-                  // Scroll to bottom button
-                  if (_showScrollToBottom)
-                    Positioned(
-                      right: 16,
-                      bottom: 80,
-                      child: ScaleTransition(
-                        scale: _fabAnimation,
-                        child: FloatingActionButton(
-                          mini: true,
-                          backgroundColor: Colors.blueAccent.withOpacity(0.8),
-                          onPressed: _scrollToBottom,
-                          child: const Icon(Icons.arrow_downward, size: 20),
-                        ),
-                      ),
-                    ),
-                ],
+            _currentDynamicScreen!,
+            Positioned(
+              top: 40,
+              left: 16,
+              child: SafeArea(
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: _exitDynamicMode,
+                ),
               ),
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: AnimatedBuilder(
-        animation: _screenAnimationController,
-        builder: (context, child) {
-          return Opacity(
-            opacity: _bottomNavAnimation.value,
-            child: Transform.translate(
-              offset: Offset(0, 20 * (1 - _bottomNavAnimation.value)),
-              child: _buildBottomNavBar(),
-            ),
-          );
+      );
+    }
+
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
+
+    return Scaffold(
+      drawer: AppDrawer(
+        username: _username,
+        userAvatarUrl: _userAvatarUrl,
+        onDynamicScreenSelected: (screen) {
+          setState(() {
+            _isDynamicMode = true;
+            _currentDynamicScreen = screen;
+          });
         },
+      ),
+      body: GradientScaffold(
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(context),
+              Expanded(
+                child: Stack(
+                  children: [
+                    AnimatedBuilder(
+                      animation: _screenAnimationController,
+                      builder: (context, child) {
+                        return Opacity(
+                          opacity: _chatContainerAnimation.value,
+                          child: Transform.translate(
+                            offset: Offset(0, 20 * (1 - _chatContainerAnimation.value)),
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                              decoration: BoxDecoration(
+                                color: isDarkMode ? const Color(0xFF1E1E2E) : Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: isDarkMode ? Colors.black38 : Colors.grey.shade300,
+                                    spreadRadius: 1,
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  _buildChatHeader(isDarkMode),
+                                  Expanded(
+                                    child: _messages.isEmpty && !_isTyping
+                                        ? _buildEmptyState(isDarkMode)
+                                        : _buildMessageList(isDarkMode),
+                                  ),
+                                  if (_selectedImage != null) _buildImagePreview(),
+                                  AnimatedBuilder(
+                                    animation: _screenAnimationController,
+                                    builder: (context, child) {
+                                      return Opacity(
+                                        opacity: _inputFieldAnimation.value,
+                                        child: Transform.translate(
+                                          offset: Offset(0, 20 * (1 - _inputFieldAnimation.value)),
+                                          child: _buildInputField(isDarkMode),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    
+                    // Scroll to bottom button
+                    if (_showScrollToBottom)
+                      Positioned(
+                        right: 16,
+                        bottom: 80,
+                        child: ScaleTransition(
+                          scale: _fabAnimation,
+                          child: FloatingActionButton(
+                            mini: true,
+                            backgroundColor: Colors.blueAccent.withOpacity(0.8),
+                            onPressed: _scrollToBottom,
+                            child: const Icon(Icons.arrow_downward, size: 20),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        bottomNavigationBar: AnimatedBuilder(
+          animation: _screenAnimationController,
+          builder: (context, child) {
+            return Opacity(
+              opacity: _bottomNavAnimation.value,
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1 - _bottomNavAnimation.value)),
+                child: _buildBottomNavBar(),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -534,98 +588,116 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           opacity: _headerAnimation.value,
           child: Transform.translate(
             offset: Offset(0, 20 * (1 - _headerAnimation.value)),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 16.0),
-              decoration: BoxDecoration(
-                gradient: themeProvider.headerGradient,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+            child: Column(
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 16.0),
+                  decoration: BoxDecoration(
+                    gradient: themeProvider.headerGradient,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '$_greeting, $_username',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white.withOpacity(0.95),
-                            letterSpacing: -0.5,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withOpacity(0.3),
-                                offset: const Offset(0, 1),
-                                blurRadius: 3,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.menu, color: Colors.white),
+                        onPressed: () {
+                          Scaffold.of(context).openDrawer();
+                        },
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '$_greeting, $_username',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white.withOpacity(0.95),
+                                letterSpacing: -0.5,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withOpacity(0.3),
+                                    offset: const Offset(0, 1),
+                                    blurRadius: 3,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              DateFormat('EEEE, MMMM d').format(DateTime.now()),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white.withOpacity(0.85),
+                                letterSpacing: 0.2,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withOpacity(0.25),
+                                    offset: const Offset(0, 1),
+                                    blurRadius: 2,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.pushNamed(context, '/settings');
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.3),
+                              width: 2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          DateFormat('EEEE, MMMM d').format(DateTime.now()),
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white.withOpacity(0.85),
-                            letterSpacing: 0.2,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withOpacity(0.25),
-                                offset: const Offset(0, 1),
-                                blurRadius: 2,
-                              ),
-                            ],
+                          child: CircleAvatar(
+                            radius: 22,
+                            backgroundColor: isDarkMode ? Colors.grey.shade800 : Colors.white.withOpacity(0.3),
+                            backgroundImage: _userAvatarUrl != null
+                                ? NetworkImage(_userAvatarUrl!)
+                                : null,
+                            child: _userAvatarUrl == null
+                                ? Icon(
+                                    Icons.person,
+                                    color: Colors.white.withOpacity(0.9),
+                                    size: 24,
+                                  )
+                                : null,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pushNamed(context, '/settings');
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.3),
-                          width: 2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
                       ),
-                      child: CircleAvatar(
-                        radius: 22,
-                        backgroundColor: isDarkMode ? Colors.grey.shade800 : Colors.white.withOpacity(0.3),
-                        backgroundImage: _userAvatarUrl != null
-                            ? NetworkImage(_userAvatarUrl!)
-                            : null,
-                        child: _userAvatarUrl == null
-                            ? Icon(
-                                Icons.person,
-                                color: Colors.white.withOpacity(0.9),
-                                size: 24,
-                              )
-                            : null,
-                      ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                QuickActions(
+                  onDynamicScreenSelected: (screen) {
+                    setState(() {
+                      _isDynamicMode = true;
+                      _currentDynamicScreen = screen;
+                    });
+                  },
+                ),
+              ],
             ),
           ),
         );
@@ -826,47 +898,209 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void _showHelpDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('CAIPO Assistant Help'),
-        content: SingleChildScrollView(
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: SingleChildScrollView(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'CAIPO is your AI assistant that can help with:',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              Stack(
+                children: [
+                  Container(
+                    height: 120,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Theme.of(context).primaryColor,
+                          Theme.of(context).primaryColor.withOpacity(0.8),
+                        ],
+                      ),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(20),
+                      ),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.help_outline,
+                        size: 50,
+                        color: Colors.white.withOpacity(0.9),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              _buildHelpItem('Voice Recording & Transcription', Icons.mic),
-              _buildHelpItem('Answering Questions', Icons.question_answer),
-              _buildHelpItem('Image Analysis', Icons.image),
-              _buildHelpItem('Text Generation', Icons.text_fields),
-              const SizedBox(height: 12),
-              const Text(
-                'Try asking me anything or use the microphone icon to record audio.',
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Welcome to CAIPO Assistant',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildHelpSection(
+                      'Dynamic Screens',
+                      [
+                        _buildHelpItem(
+                          'Activity Tracking',
+                          Icons.directions_run,
+                          'Monitor your steps, calories, and fitness goals',
+                          Colors.green,
+                        ),
+                        _buildHelpItem(
+                          'Music Control',
+                          Icons.music_note,
+                          'Control your music playback and playlists',
+                          Colors.purple,
+                        ),
+                        _buildHelpItem(
+                          'Calendar',
+                          Icons.calendar_today,
+                          'View and manage your schedule and events',
+                          Colors.blue,
+                        ),
+                        _buildHelpItem(
+                          'Transcription',
+                          Icons.record_voice_over,
+                          'Record and transcribe audio in real-time',
+                          Colors.orange,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    _buildHelpSection(
+                      'Voice Commands',
+                      [
+                        _buildHelpItem(
+                          'Natural Language',
+                          Icons.mic,
+                          'Use natural voice commands like "Show my activity" or "Play music"',
+                          Colors.blue,
+                        ),
+                        _buildHelpItem(
+                          'Quick Actions',
+                          Icons.touch_app,
+                          'Access screens quickly through the bottom navigation or drawer',
+                          Colors.teal,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    _buildHelpSection(
+                      'Additional Features',
+                      [
+                        _buildHelpItem(
+                          'AI Chat',
+                          Icons.chat_bubble,
+                          'Get intelligent responses and assistance for any query',
+                          Colors.indigo,
+                        ),
+                        _buildHelpItem(
+                          'Image Analysis',
+                          Icons.image_search,
+                          'Share images for AI-powered analysis and insights',
+                          Colors.brown,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Got It'),
+                ),
               ),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('GOT IT'),
-          ),
-        ],
       ),
     );
   }
-  
-  Widget _buildHelpItem(String text, IconData icon) {
+
+  Widget _buildHelpSection(String title, List<Widget> items) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...items,
+      ],
+    );
+  }
+
+  Widget _buildHelpItem(
+    String title,
+    IconData icon,
+    String description,
+    Color color,
+  ) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
+      padding: const EdgeInsets.only(bottom: 16.0),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: Colors.blueAccent),
-          const SizedBox(width: 8),
-          Expanded(child: Text(text)),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -887,10 +1121,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircleAvatar(
+            const CircleAvatar(
               backgroundColor: Colors.blueAccent,
               radius: 12,
-              child: const Text(
+              child: Text(
                 'AI',
                 style: TextStyle(
                   color: Colors.white,
@@ -925,11 +1159,19 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       unselectedItemColor: isDarkMode 
           ? Colors.grey.shade500 
           : Colors.grey.shade600,
-      currentIndex: 0,
+      currentIndex: _isDynamicMode ? 1 : 0,
       onTap: (index) async {
         switch (index) {
+          case 0:
+            if (_isDynamicMode) {
+              _exitDynamicMode();
+            }
+            break;
           case 1:
-            Navigator.pushNamed(context, '/record');
+            if (!_isDynamicMode) {
+              // Show dynamic screens menu
+              _showDynamicScreensMenu();
+            }
             break;
           case 2:
             Navigator.pushNamed(context, '/settings');
@@ -973,8 +1215,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           label: "Chat",
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.mic),
-          label: "Record",
+          icon: Icon(Icons.dashboard_customize),
+          label: "Dynamic",
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.settings),
@@ -985,6 +1227,103 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           label: "Logout",
         ),
       ],
+    );
+  }
+
+  void _showDynamicScreensMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF1E1E2E).withOpacity(0.95)
+                : Colors.white.withOpacity(0.95),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  'Dynamic Screens',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              _buildDynamicScreenOption(
+                'Activity Tracking',
+                Icons.directions_run,
+                Colors.green,
+                'show activity',
+              ),
+              _buildDynamicScreenOption(
+                'Music Control',
+                Icons.music_note,
+                Colors.purple,
+                'play music',
+              ),
+              _buildDynamicScreenOption(
+                'Calendar',
+                Icons.calendar_today,
+                Colors.blue,
+                'show calendar',
+              ),
+              _buildDynamicScreenOption(
+                'Transcription',
+                Icons.record_voice_over,
+                Colors.orange,
+                'transcribe',
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDynamicScreenOption(
+    String title,
+    IconData icon,
+    Color color,
+    String command,
+  ) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: color),
+      ),
+      title: Text(title),
+      trailing: Icon(Icons.chevron_right, color: color.withOpacity(0.5)),
+      onTap: () {
+        Navigator.pop(context);
+        final screen = DynamicScreenManager.getScreenForCommand(command);
+        if (screen != null) {
+          setState(() {
+            _isDynamicMode = true;
+            _currentDynamicScreen = screen;
+          });
+        }
+      },
     );
   }
 
@@ -1189,7 +1528,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             curve: Curves.easeOutCubic,
             builder: (context, value, child) {
               return Transform.translate(
-                offset: Offset(isUser ? 20 * (1 - value) : -20 * (1 - value), 0),
+                offset: Offset(
+                  isUser ? 20 * (1 - value) : -20 * (1 - value),
+                  0
+                ),
                 child: Opacity(
                   opacity: value,
                   child: child,
@@ -1205,10 +1547,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (!isUser) ...[
-                        CircleAvatar(
+                        const CircleAvatar(
                           radius: 16,
                           backgroundColor: Colors.blueAccent,
-                          child: const Text(
+                          child: Text(
                             'AI',
                             style: TextStyle(
                               color: Colors.white,
@@ -1630,7 +1972,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),
@@ -1717,5 +2059,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         curve: Interval(startInterval, endInterval, curve: curve),
       ),
     );
+  }
+
+  // Add method to exit dynamic mode
+  void _exitDynamicMode() {
+    setState(() {
+      _isDynamicMode = false;
+      _currentDynamicScreen = null;
+    });
   }
 }

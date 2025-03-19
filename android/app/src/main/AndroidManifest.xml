@@ -1,7 +1,17 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.flomadlabs.caipoappv0">  <!-- ✅ Ensure this matches your applicationId in build.gradle -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">  <!-- Removed package attribute -->
 
     <uses-permission android:name="android.permission.INTERNET" />  <!-- ✅ Required for Firebase & API calls -->
+    
+    <!-- ✅ Required for Bluetooth functionality -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" 
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
     <application
         android:label="caipoappv0"
@@ -34,7 +44,6 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
-
     </application>
 
     <!-- ✅ Ensures Flutter tools can debug the app -->
@@ -43,5 +52,11 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Add these queries for Google Sign-In -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <package android:name="com.google.android.gms" />
     </queries>
 </manifest>

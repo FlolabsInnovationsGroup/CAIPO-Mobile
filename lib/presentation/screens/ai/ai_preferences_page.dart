@@ -765,7 +765,7 @@ class _AIPreferencesPageState extends State<AIPreferencesPage> with SingleTicker
   }
   
   Widget _buildProcessingSpeedCard(bool isDarkMode, ThemeProvider themeProvider) {
-    final String cardKey = 'processing_speed_card';
+    const String cardKey = 'processing_speed_card';
     final bool isHovered = _hoverStates[cardKey] ?? false;
     
     return SlideTransition(

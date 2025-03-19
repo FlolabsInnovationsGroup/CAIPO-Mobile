@@ -65,7 +65,7 @@ class RecordingScreenState extends State<RecordingScreen> with TickerProviderSta
   final bool _isHoveringPause = false;
   
   // For hover effects
-  Map<String, bool> _hoverStates = {};
+  final Map<String, bool> _hoverStates = {};
 
   @override
   void initState() {
@@ -1299,8 +1299,8 @@ class RecordingScreenState extends State<RecordingScreen> with TickerProviderSta
               onTap: () {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('Sharing coming soon'),
+                  const SnackBar(
+                    content: Text('Sharing coming soon'),
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
@@ -1410,7 +1410,7 @@ class RecordingScreenState extends State<RecordingScreen> with TickerProviderSta
                 _loadRecentRecordings();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
+                    const SnackBar(
                       content: Text('Recording deleted'),
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -1577,7 +1577,7 @@ class _VideoPlaybackScreenState extends State<VideoPlaybackScreen> {
                               });
                             },
                             child: Container(
-                              decoration: BoxDecoration(
+                              decoration: const BoxDecoration(
                                 color: Colors.black45,
                                 shape: BoxShape.circle,
                               ),

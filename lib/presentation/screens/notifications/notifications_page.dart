@@ -76,7 +76,7 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
   final List<String> _tabs = ['All', 'Messages', 'Transcriptions', 'Updates'];
   
   // For hover effects
-  Map<String, bool> _hoverStates = {};
+  final Map<String, bool> _hoverStates = {};
   
   @override
   void initState() {
@@ -367,7 +367,7 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                               ),
                               borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
                             ),
-                            child: Icon(
+                            child: const Icon(
                               Icons.info_outline,
                               color: Colors.blue,
                               size: 24,
@@ -554,7 +554,7 @@ class _NotificationsPageState extends State<NotificationsPage> with TickerProvid
                                 onPressed: haveUnsavedChanges
                                     ? () => _showResetConfirmation(themeProvider)
                                     : null,
-                                icon: Icon(
+                                icon: const Icon(
                                   Icons.refresh,
                                   size: 18,
                                   color: Colors.red,
