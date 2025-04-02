@@ -7,6 +7,7 @@ class GradientScaffold extends StatelessWidget {
   final PreferredSizeWidget? appBar;
   final Widget? bottomNavigationBar;
   final LinearGradient? customGradient;
+  final Widget? drawer;
 
   const GradientScaffold({
     super.key,
@@ -14,6 +15,7 @@ class GradientScaffold extends StatelessWidget {
     this.appBar,
     this.bottomNavigationBar,
     this.customGradient,
+    this.drawer,
   });
 
   @override
@@ -21,6 +23,7 @@ class GradientScaffold extends StatelessWidget {
     final themeProvider = Provider.of<ThemeProvider>(context);
     
     return Scaffold(
+      drawer: drawer,
       appBar: appBar,
       body: Container(
         decoration: BoxDecoration(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../screens/dynamic/base_dynamic_screen.dart';
 import '../../data/services/dynamic_screen_manager.dart';
+import '../screens/notes/note_landing_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   final Function(BaseDynamicScreen) onDynamicScreenSelected;
@@ -17,6 +18,7 @@ class AppDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
 
     return Drawer(
       child: Container(
@@ -43,15 +45,16 @@ class AppDrawer extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Theme.of(context).primaryColor,
-                    Theme.of(context).primaryColor.withOpacity(0.8),
+                    theme.primaryColor,
+                    theme.primaryColor.withOpacity(0.8),
                   ],
                 ),
               ),
               currentAccountPicture: CircleAvatar(
                 backgroundColor: Colors.white,
-                backgroundImage:
-                    userAvatarUrl != null ? NetworkImage(userAvatarUrl!) : null,
+                backgroundImage: userAvatarUrl != null
+                    ? NetworkImage(userAvatarUrl!)
+                    : null,
                 child: userAvatarUrl == null
                     ? const Icon(Icons.person, color: Colors.blue)
                     : null,
@@ -69,26 +72,41 @@ class AppDrawer extends StatelessWidget {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Text(
+                      'DYNAMIC SCREENS',
+                      style: TextStyle(
+                        color: theme.primaryColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ),
                   _buildDynamicScreenTile(
                     context,
                     'Activity Tracking',
                     Icons.directions_run,
-                    'show activity',
+                    'Track your daily activities',
                     Colors.green,
+                    'Track your steps, heart rate, and more',
                   ),
                   _buildDynamicScreenTile(
                     context,
                     'Music Control',
                     Icons.music_note,
-                    'play music',
+                    'Control your music playback',
                     Colors.purple,
+                    'Control your music playback',
                   ),
                   _buildDynamicScreenTile(
                     context,
                     'Calendar',
                     Icons.calendar_today,
-                    'show calendar',
+                    'View your schedule',
                     Colors.blue,
+                    'View and manage your schedule',
                   ),
                   _buildDynamicScreenTile(
                     context,
@@ -96,19 +114,70 @@ class AppDrawer extends StatelessWidget {
                     Icons.record_voice_over,
                     'transcribe',
                     Colors.orange,
+                    'Convert speech to text',
                   ),
-                  const Divider(),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'NOTES',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildDynamicScreenTile(
+                    context,
+                    'Create Note',
+                    Icons.note_add,
+                    'Create a new note',
+                    Colors.grey,
+                    'Create and manage your notes',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/notes');
+                    },
+                  ),
+                  const Divider(height: 32),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    child: Text(
+                      'SETTINGS',
+                      style: TextStyle(
+                        color: theme.primaryColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ),
                   ListTile(
-                    leading: const Icon(Icons.settings),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.settings, color: theme.primaryColor),
+                    ),
                     title: const Text('Settings'),
+                    subtitle: const Text('Customize your experience'),
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.pushNamed(context, '/settings');
                     },
                   ),
                   ListTile(
-                    leading: const Icon(Icons.help_outline),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.help_outline, color: theme.primaryColor),
+                    ),
                     title: const Text('Help'),
+                    subtitle: const Text('Get assistance and support'),
                     onTap: () {
                       Navigator.pop(context);
                       // Show help dialog
@@ -117,7 +186,7 @@ class AppDrawer extends StatelessWidget {
                 ],
               ),
             ),
-            const Divider(),
+            const Divider(height: 1),
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
@@ -138,8 +207,10 @@ class AppDrawer extends StatelessWidget {
     BuildContext context,
     String title,
     IconData icon,
-    String command,
+    String description,
     Color color,
+    String subtitle,
+    {VoidCallback? onTap}
   ) {
     return ListTile(
       leading: Container(
@@ -151,13 +222,14 @@ class AppDrawer extends StatelessWidget {
         child: Icon(icon, color: color),
       ),
       title: Text(title),
-      onTap: () {
+      subtitle: Text(subtitle),
+      onTap: onTap ?? () {
         Navigator.pop(context);
-        final screen = DynamicScreenManager.getScreenForCommand(command);
+        final screen = DynamicScreenManager.getScreenForCommand(description);
         if (screen != null) {
           onDynamicScreenSelected(screen);
         }
       },
     );
   }
-}
+} 

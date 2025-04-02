@@ -14,15 +14,14 @@ abstract class BaseDynamicScreen extends StatefulWidget {
   BaseDynamicScreenState createState();
 }
 
-abstract class BaseDynamicScreenState<T extends BaseDynamicScreen>
-    extends State<T> with TickerProviderStateMixin {
+abstract class BaseDynamicScreenState<T extends BaseDynamicScreen> extends State<T> with TickerProviderStateMixin {
   // Protected animation controllers and animations
   @protected
   late AnimationController backgroundController;
-
+  
   @protected
   late Animation<Color?> backgroundStartAnimation;
-
+  
   @protected
   late Animation<Color?> backgroundEndAnimation;
 
@@ -35,7 +34,7 @@ abstract class BaseDynamicScreenState<T extends BaseDynamicScreen>
   @override
   void initState() {
     super.initState();
-
+    
     // Initialize background animations
     backgroundController = AnimationController(
       duration: const Duration(milliseconds: 500),
@@ -123,4 +122,4 @@ abstract class BaseDynamicScreenState<T extends BaseDynamicScreen>
       },
     );
   }
-}
+} 

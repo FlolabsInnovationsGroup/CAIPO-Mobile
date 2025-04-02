@@ -16,8 +16,7 @@ class MusicScreenState extends BaseDynamicScreenState<MusicScreen> {
   bool _isPlaying = false;
   double _volume = 0.8;
   Duration _songPosition = Duration.zero;
-  final Duration _songDuration =
-      const Duration(minutes: 3, seconds: 45); // Mock duration
+  final Duration _songDuration = const Duration(minutes: 3, seconds: 45); // Mock duration
 
   // Mock data
   final Map<String, String> _currentSong = {
@@ -48,7 +47,7 @@ class MusicScreenState extends BaseDynamicScreenState<MusicScreen> {
   @override
   void setupBackgroundAnimation() {
     backgroundStartAnimation = ColorTween(
-      begin: const Color(0xFF9C27B0), // Purple for music
+      begin: const Color(0xFF9C27B0),  // Purple for music
       end: const Color(0xFFBA68C8),
     ).animate(backgroundController);
 
@@ -110,9 +109,7 @@ class MusicScreenState extends BaseDynamicScreenState<MusicScreen> {
                 ),
                 IconButton(
                   iconSize: 48,
-                  icon: Icon(_isPlaying
-                      ? Icons.pause_circle_filled
-                      : Icons.play_circle_filled),
+                  icon: Icon(_isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled),
                   onPressed: () {
                     setState(() {
                       _isPlaying = !_isPlaying;
@@ -274,4 +271,4 @@ class MusicScreenState extends BaseDynamicScreenState<MusicScreen> {
       ),
     );
   }
-}
+} 

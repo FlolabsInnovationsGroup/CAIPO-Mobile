@@ -16,7 +16,7 @@ class ActivityScreen extends BaseDynamicScreen {
 
 class ActivityScreenState extends BaseDynamicScreenState<ActivityScreen> {
   final BluetoothService _bluetoothService = BluetoothService();
-
+  
   // Activity metrics
   int _steps = 0;
   int _caloriesBurned = 0;
@@ -228,4 +228,4 @@ class ActivityScreenState extends BaseDynamicScreenState<ActivityScreen> {
     _bluetoothService.disconnect();
     super.dispose();
   }
-}
+} 

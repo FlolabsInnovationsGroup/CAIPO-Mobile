@@ -20,6 +20,12 @@ The **CAIPO Mobile** application is a sophisticated Flutter-based platform that 
 - **Data Synchronization:** Sync preferences and data across devices when signed in.
 - **Privacy Controls:** Manage data sharing and privacy settings.
 
+### Wearable Integration
+- **Real-time Data Visualization:** Live charts and metrics from connected wearable devices
+- **Multi-device Support:** Seamless connection to various wearable devices
+- **Data Recording:** Audio and video capture with status monitoring
+- **Battery Management:** Real-time battery level monitoring and alerts
+
 ## Technical Architecture
 
 ### Frontend
@@ -34,6 +40,11 @@ The **CAIPO Mobile** application is a sophisticated Flutter-based platform that 
   - Storage for audio files and user assets
 - **OpenAI API:** Integration for AI-powered features and content generation.
 - **Error Handling:** Robust error management with graceful degradation when services are unavailable.
+
+### State Management
+- **Provider Pattern:** Centralized state management for predictable data flow
+- **Dependency Injection:** GetIt for service locator pattern
+- **Stream-based Updates:** Real-time UI updates using StreamBuilder
 
 ## Project Structure
 ```

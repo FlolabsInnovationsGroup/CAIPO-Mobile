@@ -7,27 +7,22 @@ class BluetoothService extends ChangeNotifier {
   static final BluetoothService _instance = BluetoothService._internal();
   factory BluetoothService() => _instance;
   BluetoothService._internal();
-
+  
   bool _isScanning = false;
   bool get isScanning => _isScanning;
-
+  
   blue.BluetoothDevice? _connectedDevice;
   blue.BluetoothDevice? get connectedDevice => _connectedDevice;
 
   final List<blue.BluetoothDevice> _discoveredDevices = [];
-  List<blue.BluetoothDevice> get discoveredDevices =>
-      List.unmodifiable(_discoveredDevices);
+  List<blue.BluetoothDevice> get discoveredDevices => List.unmodifiable(_discoveredDevices);
 
   // Stream controllers
-  final _deviceStateController =
-      StreamController<blue.BluetoothConnectionState>.broadcast();
-  Stream<blue.BluetoothConnectionState> get deviceStateStream =>
-      _deviceStateController.stream;
+  final _deviceStateController = StreamController<blue.BluetoothConnectionState>.broadcast();
+  Stream<blue.BluetoothConnectionState> get deviceStateStream => _deviceStateController.stream;
 
-  final _activityDataController =
-      StreamController<Map<String, dynamic>>.broadcast();
-  Stream<Map<String, dynamic>> get activityDataStream =>
-      _activityDataController.stream;
+  final _activityDataController = StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get activityDataStream => _activityDataController.stream;
 
   // Initialize Bluetooth service
   Future<void> initialize() async {
@@ -96,7 +91,7 @@ class BluetoothService extends ChangeNotifier {
     try {
       await device.connect();
       _connectedDevice = device;
-
+      
       // Setup state monitoring
       device.connectionState.listen((state) {
         _deviceStateController.add(state);
@@ -169,4 +164,4 @@ class BluetoothService extends ChangeNotifier {
     _activityDataController.close();
     super.dispose();
   }
-}
+} 
