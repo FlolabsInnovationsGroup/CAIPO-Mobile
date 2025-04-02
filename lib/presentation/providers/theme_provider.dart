@@ -7,9 +7,12 @@ import 'package:injectable/injectable.dart';
 @singleton
 class ThemeProvider with ChangeNotifier {
   // Preference keys
-  static const String _themeKey = 'theme_mode';
-  static const String _gradientStyleKey = 'gradient_style';
+  static const String _themeModeKey = 'theme_mode';
+  static const String _textScaleKey = 'text_scale';
+  static const String _useMinimalistUIKey = 'minimalist_ui';
+  static const String _primaryColorKey = 'primary_color';
   static const String _fontFamilyKey = 'font_family';
+  static const String _gradientStyleKey = 'gradient_style';
   static const String _accentColorKey = 'accent_color';
   static const String _textSizeKey = 'text_size';
   static const String _animationSpeedKey = 'animation_speed';
@@ -24,14 +27,17 @@ class ThemeProvider with ChangeNotifier {
   static const Color _defaultAccentColor = Colors.blue;
   
   // Theme mode
-  ThemeMode _themeMode = ThemeMode.system;
+  ThemeMode _themeMode;
+  double _textScale;
+  bool _useMinimalistUI;
+  Color _primaryColor;
+  String _fontFamily;
   
   // Gradient and color preferences
   String _gradientStyle = 'purple'; // 'purple', 'blue', 'teal'
   String _accentColorName = 'blue'; // 'blue', 'purple', 'teal', etc.
   
   // UI style preferences
-  String _fontFamily = 'Roboto';
   double _textSizeMultiplier = 1.0; // For scaling text
   String _animationSpeed = 'normal'; // 'slow', 'normal', 'fast'
   bool _useAnimations = true;
@@ -80,51 +86,108 @@ class ThemeProvider with ChangeNotifier {
   late TextStyle _bodyMedium;
   
   @factoryMethod
-  ThemeProvider(@Named('sharedPreferences') this._prefs) {
+  ThemeProvider(@Named('sharedPreferences') this._prefs) :
+    _themeMode = _getThemeModeFromPrefs(_prefs),
+    _textScale = _prefs.getDouble(_textScaleKey) ?? 1.0,
+    _useMinimalistUI = _prefs.getBool(_useMinimalistUIKey) ?? false,
+    _primaryColor = Color(_prefs.getInt(_primaryColorKey) ?? Colors.purple.value),
+    _fontFamily = _prefs.getString(_fontFamilyKey) ?? 'Roboto',
+    _gradientStyle = _prefs.getString(_gradientStyleKey) ?? 'purple',
+    _accentColorName = _prefs.getString(_accentColorKey) ?? 'blue',
+    _textSizeMultiplier = _prefs.getDouble(_textSizeKey) ?? 1.0,
+    _animationSpeed = _prefs.getString(_animationSpeedKey) ?? 'normal',
+    _useAnimations = _prefs.getBool(_useAnimationsKey) ?? true,
+    _borderRadius = _prefs.getDouble(_roundedCornersKey) ?? 12.0,
+    _elevationFactor = _prefs.getDouble(_elevationStyleKey) ?? 1.0 {
     _initializeTextStyles();
+  }
+
+  // Helper method to get theme mode from preferences
+  static ThemeMode _getThemeModeFromPrefs(SharedPreferences prefs) {
+    // Get as string (new format)
+    final themeStr = prefs.getString(_themeModeKey);
+    if (themeStr != null) {
+      try {
+        // First try parsing as ThemeMode enum string
+        return ThemeMode.values.firstWhere(
+          (mode) => mode.toString().split('.').last.toLowerCase() == themeStr.toLowerCase(),
+          orElse: () => ThemeMode.system,
+        );
+      } catch (e) {
+        // If that fails, try parsing as integer string
+        final themeInt = int.tryParse(themeStr);
+        if (themeInt != null && themeInt >= 0 && themeInt < ThemeMode.values.length) {
+          return ThemeMode.values[themeInt];
+        }
+      }
+    }
+    
+    return ThemeMode.system;
   }
 
   // Initialize the provider with custom settings
   void initialize({
-    ThemeMode initialThemeMode = ThemeMode.system,
-    double initialBorderRadius = 12.0,
-    Color initialAccentColor = Colors.blueAccent,
+    ThemeMode? initialThemeMode,
+    double? initialBorderRadius,
+    Color? initialAccentColor,
   }) {
-    _themeMode = initialThemeMode;
-    _borderRadius = initialBorderRadius;
-    _accentColor = initialAccentColor;
+    if (initialThemeMode != null) _themeMode = initialThemeMode;
+    if (initialBorderRadius != null) _borderRadius = initialBorderRadius;
+    if (initialAccentColor != null) _accentColor = initialAccentColor;
+    _initializeTextStyles();
   }
 
-  // Public method to load preferences
+  // Public method to load preferences - now optimized to only notify if changes occurred
   Future<void> loadPreferences() async {
-    await _loadPreferences();
-  }
-
-  ThemeMode get themeMode => _themeMode;
-  bool get usePurpleGradient => _gradientStyle == 'purple';
-
-  Future<void> _loadPreferences() async {
-    final savedTheme = _prefs.getString(_themeKey);
+    bool hasChanges = false;
+    
+    final savedTheme = _prefs.getString(_themeModeKey);
     if (savedTheme != null) {
-      _themeMode = ThemeMode.values.firstWhere(
+      final newThemeMode = ThemeMode.values.firstWhere(
         (mode) => mode.toString() == savedTheme,
         orElse: () => ThemeMode.system,
       );
+      if (_themeMode != newThemeMode) {
+        _themeMode = newThemeMode;
+        hasChanges = true;
+      }
+    }
+
+    final newGradientStyle = _prefs.getString(_gradientStyleKey) ?? 'purple';
+    if (_gradientStyle != newGradientStyle) {
+      _gradientStyle = newGradientStyle;
+      hasChanges = true;
+    }
+
+    final newAccentColorName = _prefs.getString(_accentColorKey) ?? 'blue';
+    if (_accentColorName != newAccentColorName) {
+      _accentColorName = newAccentColorName;
+      hasChanges = true;
+    }
+
+    final newTextSizeMultiplier = _prefs.getDouble(_textSizeKey) ?? 1.0;
+    if (_textSizeMultiplier != newTextSizeMultiplier) {
+      _textSizeMultiplier = newTextSizeMultiplier;
+      hasChanges = true;
+    }
+
+    if (hasChanges) {
+      _initializeTextStyles();
       notifyListeners();
     }
-    _gradientStyle = _prefs.getString(_gradientStyleKey) ?? 'purple';
-    _accentColorName = _prefs.getString(_accentColorKey) ?? 'blue';
-    _fontFamily = _prefs.getString(_fontFamilyKey) ?? 'Roboto';
-    _textSizeMultiplier = _prefs.getDouble(_textSizeKey) ?? 1.0;
-    _animationSpeed = _prefs.getString(_animationSpeedKey) ?? 'normal';
-    _useAnimations = _prefs.getBool(_useAnimationsKey) ?? true;
-    _borderRadius = _prefs.getDouble(_roundedCornersKey) ?? 12.0;
-    _elevationFactor = _prefs.getDouble(_elevationStyleKey) ?? 1.0;
   }
+
+  ThemeMode get themeMode => _themeMode;
+  double get textScale => _textScale;
+  bool get useMinimalistUI => _useMinimalistUI;
+  Color get primaryColor => _primaryColor;
+  String get fontFamily => _fontFamily;
+  bool get usePurpleGradient => _gradientStyle == 'purple';
 
   Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
-    await _prefs.setString(_themeKey, mode.toString());
+    // Save only as string in the new format
+    await _prefs.setString(_themeModeKey, mode.toString().split('.').last.toLowerCase());
     notifyListeners();
   }
 
@@ -133,60 +196,40 @@ class ThemeProvider with ChangeNotifier {
   // Get the appropriate scaffold gradient based on theme
   LinearGradient get scaffoldGradient {
     if (_themeMode == ThemeMode.light) {
-      // Light theme - light blue gradient
       return const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          Color(0xFFE3F2FD), // Very light blue
-          Color(0xFF90CAF9), // Medium light blue
+          Color(0xFFF5F5F5), // Lighter, less resource-intensive
+          Color(0xFFE0E0E0), // Simpler gradient
         ],
       );
     } else {
-      // Dark theme - more elegant and subtle gradient
       return const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          Color(0xFF252042), // Muted dark purple - 0%
-          Color(0xFF1E1A38), // Deeper muted purple - 20%
-          Color(0xFF18152E), // Deep blue-purple - 40%
-          Color(0xFF131126), // Deep blue-purple - 60%
-          Color(0xFF0E0C1E), // Very deep blue-purple - 80%
-          Color(0xFF090818), // Almost black with deep blue tint - 100%
+          Color(0xFF1A1A1A), // Simpler dark gradient
+          Color(0xFF121212), // Material dark surface color
         ],
-        stops: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
       );
     }
   }
 
-  // Get the header gradient (can be used for cards, app bars, etc.)
-  LinearGradient get headerGradient {
-    if (_themeMode == ThemeMode.light) {
-      return const LinearGradient(
-        colors: [
-          Color(0xFF2196F3),  // Primary blue
-          Color(0xFF64B5F6),  // Lighter blue
-        ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
-    } else {
-      if (_gradientStyle == 'purple') {
-        return const LinearGradient(
-          colors: [Color(0xFF4A2B9E), Color(0xFF341C78)], // More muted purple
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        );
-      } else {
-        return const LinearGradient(
-          colors: [Color(0xFF0A0F1F), Color(0xFF152238)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        );
-      }
-    }
-  }
+  // Get the header gradient (optimized)
+  LinearGradient get headerGradient => LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: isDarkMode
+        ? [
+            _primaryColor.withOpacity(0.5),
+            _primaryColor.withOpacity(0.2),
+          ]
+        : [
+            _primaryColor.withOpacity(0.3),
+            _primaryColor.withOpacity(0.1),
+          ],
+  );
 
   // Get the appropriate gradient colors as a list (for backward compatibility)
   List<Color> getGradientColors() {
@@ -287,7 +330,6 @@ class ThemeProvider with ChangeNotifier {
   // ---------- Getters ----------
   
   String get gradientStyle => _gradientStyle;
-  String get fontFamily => _fontFamily;
   double get textSizeMultiplier => _textSizeMultiplier;
   bool get useAnimations => _useAnimations;
   String get animationSpeedName => _animationSpeed;
@@ -783,4 +825,24 @@ class ThemeProvider with ChangeNotifier {
         ? const Color(0xFFE3F2FD) // Light blue for light theme
         : const Color(0xFF1E1A33); // Dark purplish-blue for dark theme
   }
+
+  // Optimized background gradient
+  LinearGradient get backgroundGradient => LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: isDarkMode
+        ? [
+            const Color(0xFF1A1A1A),
+            const Color(0xFF121212),
+          ]
+        : [
+            const Color(0xFFFAFAFA),
+            const Color(0xFFF5F5F5),
+          ],
+  );
+
+  // Dynamic UI helpers
+  double get minimalistPadding => _useMinimalistUI ? 12.0 : 16.0;
+  double get minimalistBorderRadius => _useMinimalistUI ? 8.0 : 16.0;
+  double get minimalistElevation => _useMinimalistUI ? 0.0 : 2.0;
 }

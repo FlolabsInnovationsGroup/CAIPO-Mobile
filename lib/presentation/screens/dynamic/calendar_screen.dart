@@ -14,7 +14,7 @@ class CalendarScreen extends BaseDynamicScreen {
 
 class CalendarScreenState extends BaseDynamicScreenState<CalendarScreen> {
   DateTime _selectedDate = DateTime.now();
-
+  
   // Mock data
   final List<Map<String, dynamic>> _events = [
     {
@@ -56,7 +56,7 @@ class CalendarScreenState extends BaseDynamicScreenState<CalendarScreen> {
   @override
   void setupBackgroundAnimation() {
     backgroundStartAnimation = ColorTween(
-      begin: const Color(0xFF00BCD4), // Cyan for calendar
+      begin: const Color(0xFF00BCD4),  // Cyan for calendar
       end: const Color(0xFF4DD0E1),
     ).animate(backgroundController);
 
@@ -84,8 +84,7 @@ class CalendarScreenState extends BaseDynamicScreenState<CalendarScreen> {
                   icon: const Icon(Icons.chevron_left),
                   onPressed: () {
                     setState(() {
-                      _selectedDate =
-                          _selectedDate.subtract(const Duration(days: 1));
+                      _selectedDate = _selectedDate.subtract(const Duration(days: 1));
                     });
                   },
                 ),
@@ -100,8 +99,7 @@ class CalendarScreenState extends BaseDynamicScreenState<CalendarScreen> {
                   icon: const Icon(Icons.chevron_right),
                   onPressed: () {
                     setState(() {
-                      _selectedDate =
-                          _selectedDate.add(const Duration(days: 1));
+                      _selectedDate = _selectedDate.add(const Duration(days: 1));
                     });
                   },
                 ),
@@ -165,8 +163,7 @@ class CalendarScreenState extends BaseDynamicScreenState<CalendarScreen> {
           decoration: event['isCompleted'] ? TextDecoration.lineThrough : null,
         ),
       ),
-      subtitle: Text(
-          '${event['time']} • ${event['duration']} • ${event['location']}'),
+      subtitle: Text('${event['time']} • ${event['duration']} • ${event['location']}'),
       trailing: Checkbox(
         value: event['isCompleted'],
         onChanged: (value) {
@@ -184,8 +181,7 @@ class CalendarScreenState extends BaseDynamicScreenState<CalendarScreen> {
       title: Text(
         reminder['title'],
         style: TextStyle(
-          decoration:
-              reminder['isCompleted'] ? TextDecoration.lineThrough : null,
+          decoration: reminder['isCompleted'] ? TextDecoration.lineThrough : null,
         ),
       ),
       subtitle: Text(reminder['time']),
@@ -260,4 +256,4 @@ class CalendarScreenState extends BaseDynamicScreenState<CalendarScreen> {
       ),
     );
   }
-}
+} 

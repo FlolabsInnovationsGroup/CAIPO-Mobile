@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../presentation/providers/theme_provider.dart';
+import '../../../presentation/providers/settings_provider.dart';
+import '../../../core/navigation/navigation_service.dart';
+import '../../../core/utils/animation_constants.dart';
 import '../profile/account_profile_page.dart';
 import '../ai/ai_preferences_page.dart';
 import '../notifications/notifications_page.dart';
@@ -31,9 +34,6 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
   // For animation of list items
   final List<Animation<double>> _itemAnimations = [];
   
-  // Keep track of recently accessed settings
-  final List<String> _recentSettings = [];
-  
   // Mouse hover states for interactive feedback
   final Map<String, bool> _hoveredItems = {};
 
@@ -41,7 +41,6 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
   void initState() {
     super.initState();
     _initAnimations();
-    _loadRecentSettings();
   }
   
   void _initAnimations() {
@@ -73,17 +72,6 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
     
     _animationController.forward();
   }
-  
-  Future<void> _loadRecentSettings() async {
-    // This would typically load from SharedPreferences in a real app
-    // For now we'll just use a placeholder set of recent items
-    setState(() {
-      _recentSettings.addAll([
-        'Appearance & Display',
-        'Account & Profile',
-      ]);
-    });
-  }
 
   @override
   void dispose() {
@@ -93,31 +81,17 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
     _scrollController.dispose();
     super.dispose();
   }
-  
-  void _addToRecent(String title) {
-    // Add to recent if not already there
-    if (!_recentSettings.contains(title)) {
-      setState(() {
-        _recentSettings.insert(0, title);
-        if (_recentSettings.length > 3) {
-          _recentSettings.removeLast();
-        }
-      });
-    } else {
-      // Move to the front if already exists
-      setState(() {
-        _recentSettings.remove(title);
-        _recentSettings.insert(0, title);
-      });
-    }
-    
-    // In a real app, save to persistent storage
-    // _saveRecentSettings();
+
+  void _navigateToPage(BuildContext context, Widget page, String title) {
+    final settingsProvider = Provider.of<SettingsProvider>(context, listen: false);
+    settingsProvider.addToRecent(title);
+    NavigationService.navigateTo(page);
   }
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final settingsProvider = Provider.of<SettingsProvider>(context);
     final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
 
     final List<Map<String, dynamic>> settingsOptions = [
@@ -341,7 +315,7 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
             ),
             
             // Recently accessed settings
-            if (_recentSettings.isNotEmpty && _searchQuery.isEmpty) ...[
+            if (settingsProvider.recentSettings.isNotEmpty && _searchQuery.isEmpty) ...[
               AnimatedBuilder(
                 animation: _animationController,
                 builder: (context, child) {
@@ -371,9 +345,9 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
                       child: ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         scrollDirection: Axis.horizontal,
-                        itemCount: _recentSettings.length,
+                        itemCount: settingsProvider.recentSettings.length,
                         itemBuilder: (context, index) {
-                          final recentTitle = _recentSettings[index];
+                          final recentTitle = settingsProvider.recentSettings[index];
                           final recentOption = settingsOptions.firstWhere(
                             (option) => option['title'] == recentTitle,
                             orElse: () => {'title': recentTitle},
@@ -420,25 +394,10 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                     onPressed: () {
                                       if (recentOption['page'] != null) {
-                                        _addToRecent(recentOption['title']);
-                                        Navigator.push(
+                                        _navigateToPage(
                                           context,
-                                          PageRouteBuilder(
-                                            pageBuilder: (context, animation, secondaryAnimation) => recentOption['page'],
-                                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                              return FadeTransition(
-                                                opacity: animation,
-                                                child: SlideTransition(
-                                                  position: Tween<Offset>(
-                                                    begin: const Offset(0.05, 0),
-                                                    end: Offset.zero,
-                                                  ).animate(animation),
-                                                  child: child,
-                                                ),
-                                              );
-                                            },
-                                            transitionDuration: themeProvider.animationDurationMedium,
-                                          ),
+                                          recentOption['page'] as Widget,
+                                          recentOption['title'] as String,
                                         );
                                       }
                                     },
@@ -621,25 +580,10 @@ class _SettingsScreenState extends State<SettingsScreen> with TickerProviderStat
                           themeProvider,
                           onTap: () {
                             if (option['page'] != null) {
-                              _addToRecent(option['title']);
-                              Navigator.push(
+                              _navigateToPage(
                                 context,
-                                PageRouteBuilder(
-                                  pageBuilder: (context, animation, secondaryAnimation) => option['page'],
-                                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                    return FadeTransition(
-                                      opacity: animation,
-                                      child: SlideTransition(
-                                        position: Tween<Offset>(
-                                          begin: const Offset(0.05, 0),
-                                          end: Offset.zero,
-                                        ).animate(animation),
-                                        child: child,
-                                      ),
-                                    );
-                                  },
-                                  transitionDuration: themeProvider.animationDurationMedium,
-                                ),
+                                option['page'] as Widget,
+                                option['title'] as String,
                               );
                             }
                           },

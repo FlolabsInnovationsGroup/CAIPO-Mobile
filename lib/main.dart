@@ -6,6 +6,9 @@ import 'dart:async';
 import 'di/injection.dart';
 import 'data/services/firebase_service.dart';
 import 'presentation/providers/theme_provider.dart';
+import 'presentation/providers/wearable_provider.dart';
+import 'core/navigation/navigation_service.dart';
+import 'core/utils/animation_constants.dart';
 import 'presentation/screens/settings/settings_page.dart';
 import 'presentation/screens/home/home_screen.dart';
 import 'presentation/screens/welcome/welcome_screen.dart';
@@ -15,9 +18,10 @@ import 'presentation/screens/home/recording_screen.dart';
 import 'presentation/screens/ai/transcription_screen.dart';
 import 'presentation/screens/splash/splash_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
-// Global key for navigator to use in error handling
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+import 'presentation/providers/settings_provider.dart';
+import 'presentation/screens/notes/note_landing_screen.dart';
+import 'presentation/screens/notes/create_note_screen.dart';
+import 'presentation/screens/notes/recording_summary_screen.dart';
 
 Future<void> main() async {
   // Catch Flutter errors and log them
@@ -56,16 +60,20 @@ Future<void> main() async {
     // Configure dependency injection
     await configureDependencies();
 
-    // Get theme provider and initialize it
+    // Get providers and initialize them
     final themeProvider = getIt<ThemeProvider>();
-    themeProvider.initialize(); // Initialize with default values
+    final wearableProvider = getIt<WearableProvider>();
+    final settingsProvider = getIt<SettingsProvider>();
+    
+    themeProvider.initialize();
     await themeProvider.loadPreferences();
 
     runApp(
       MultiProvider(
         providers: [
           ChangeNotifierProvider.value(value: themeProvider),
-          // Add more providers here
+          ChangeNotifierProvider.value(value: wearableProvider),
+          ChangeNotifierProvider.value(value: settingsProvider),
         ],
         child: const MyApp(),
       ),
@@ -91,16 +99,47 @@ class MyApp extends StatelessWidget {
       theme: themeProvider.getThemeData(false),
       darkTheme: themeProvider.getThemeData(true),
       themeMode: themeProvider.themeMode,
-      navigatorKey: navigatorKey,
+      navigatorKey: NavigationService.navigatorKey,
       home: _buildHomeBasedOnAuth(),
-      routes: {
-        '/onboarding': (context) => const OnboardingScreen(),
-        '/welcome': (context) => const WelcomeScreen(),
-        '/auth': (context) => const AuthScreen(),
-        '/home': (context) => const HomeScreen(),
-        '/settings': (context) => const SettingsScreen(),
-        '/record': (context) => const RecordingScreen(),
-        '/transcription': (context) => const TranscriptionScreen(audioFilePath: ""),
+      onGenerateRoute: (settings) {
+        // Custom route generation with animations
+        Widget page;
+        switch (settings.name) {
+          case '/onboarding':
+            page = const OnboardingScreen();
+            break;
+          case '/welcome':
+            page = const WelcomeScreen();
+            break;
+          case '/auth':
+            page = const AuthScreen();
+            break;
+          case '/home':
+            page = const HomeScreen();
+            break;
+          case '/settings':
+            page = const SettingsScreen();
+            break;
+          case '/record':
+            page = const RecordingScreen();
+            break;
+          case '/notes':
+            page = const NoteLandingScreen();
+            break;
+          case '/notes/create':
+            page = const CreateNoteScreen();
+            break;
+          case '/notes/recording':
+            page = const RecordingSummaryScreen();
+            break;
+          case '/transcription':
+            final args = settings.arguments as Map<String, dynamic>?;
+            page = TranscriptionScreen(audioFilePath: args?['audioFilePath'] ?? "");
+            break;
+          default:
+            page = const SplashScreen();
+        }
+        return AnimationConstants.slideTransition(page);
       },
       builder: (context, child) {
         // Apply font scaling for accessibility

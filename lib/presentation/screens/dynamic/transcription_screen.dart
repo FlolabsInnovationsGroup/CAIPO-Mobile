@@ -12,19 +12,17 @@ class TranscriptionScreen extends BaseDynamicScreen {
   TranscriptionScreenState createState() => TranscriptionScreenState();
 }
 
-class TranscriptionScreenState
-    extends BaseDynamicScreenState<TranscriptionScreen> {
+class TranscriptionScreenState extends BaseDynamicScreenState<TranscriptionScreen> {
   final bool _isTranscribing = false;
   final String _transcribedText = '';
   bool _hasAudioFile = false;
   Duration _audioPosition = Duration.zero;
-  final Duration _audioDuration =
-      const Duration(minutes: 2, seconds: 30); // Mock duration
+  final Duration _audioDuration = const Duration(minutes: 2, seconds: 30); // Mock duration
 
   @override
   void setupBackgroundAnimation() {
     backgroundStartAnimation = ColorTween(
-      begin: const Color(0xFF2196F3), // Blue for transcription
+      begin: const Color(0xFF2196F3),  // Blue for transcription
       end: const Color(0xFF64B5F6),
     ).animate(backgroundController);
 
@@ -225,4 +223,4 @@ class TranscriptionScreenState
       ),
     );
   }
-}
+} 

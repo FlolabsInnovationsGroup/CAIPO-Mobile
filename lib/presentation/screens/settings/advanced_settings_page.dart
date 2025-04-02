@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/gradient_scaffold.dart';
 import '../../widgets/base_screen.dart';
+import '../../widgets/settings_card.dart';
 import 'dart:async';
 
 class AdvancedSettingsPage extends StatefulWidget {
@@ -15,6 +16,33 @@ class AdvancedSettingsPage extends StatefulWidget {
 class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with TickerProviderStateMixin, ScreenAnimationMixin {
   // Settings values
   final Map<String, Map<String, dynamic>> _settings = {
+    'CAIPO Wearable': {
+      'Device Pairing': {
+        'value': false,
+        'icon': Icons.watch,
+        'description': 'Manage CAIPO device pairing and connection.',
+        'details': 'Configure Bluetooth pairing and connection settings for your CAIPO wearable device.'
+      },
+      'Data Sync Interval': {
+        'value': '30s',
+        'icon': Icons.sync,
+        'description': 'Set how often data syncs with the wearable.',
+        'details': 'Configure how frequently the app syncs data with your CAIPO device. More frequent syncing uses more battery.',
+        'options': ['10s', '30s', '1m', '5m']
+      },
+      'Battery Optimization': {
+        'value': true,
+        'icon': Icons.battery_charging_full,
+        'description': 'Optimize battery usage for longer device life.',
+        'details': 'Enables smart power management to extend battery life of your CAIPO device.'
+      },
+      'Sensor Settings': {
+        'value': true,
+        'icon': Icons.sensors,
+        'description': 'Configure individual sensor behaviors.',
+        'details': 'Fine-tune settings for motion sensors, heart rate monitoring, and other sensors.'
+      },
+    },
     'Developer Options': {
       'Enable Developer Mode': {
         'value': false,
@@ -554,63 +582,232 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Ticker
   Widget _buildWarningHeader(bool isDarkMode, ThemeProvider themeProvider) {
     return Container(
       margin: const EdgeInsets.all(16.0),
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.orange.withOpacity(0.1),
-            Colors.orange.withOpacity(0.2),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(themeProvider.borderRadius),
-        border: Border.all(
-          color: Colors.orange.withOpacity(0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.orange.withOpacity(0.05),
-            blurRadius: 10,
-            spreadRadius: 0,
-          ),
-        ],
-      ),
-      child: Row(
+      child: Stack(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  themeProvider.accentColor.withOpacity(isDarkMode ? 0.15 : 0.1),
+                  themeProvider.accentColor.withOpacity(isDarkMode ? 0.1 : 0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: themeProvider.accentColor.withOpacity(0.2),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: themeProvider.accentColor.withOpacity(0.1),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            child: const Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.orange,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Advanced Settings',
-                  style: themeProvider.titleMedium.copyWith(
-                    color: Colors.orange.shade800,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            themeProvider.accentColor.withOpacity(0.2),
+                            themeProvider.accentColor.withOpacity(0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: themeProvider.accentColor.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.tips_and_updates,
+                        color: themeProvider.accentColor,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Welcome to Advanced Settings',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: themeProvider.accentColor,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Customize your CAIPO experience with powerful features and optimizations.',
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: isDarkMode ? Colors.white70 : Colors.black87,
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'These settings are intended for advanced users. Changes may affect app stability.',
-                  style: themeProvider.bodyMedium.copyWith(
-                    color: Colors.orange.shade800,
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isDarkMode 
+                        ? Colors.black.withOpacity(0.2) 
+                        : Colors.white.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDarkMode
+                          ? Colors.white.withOpacity(0.1)
+                          : Colors.black.withOpacity(0.05),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 18,
+                            color: themeProvider.accentColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Quick Tips:',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: themeProvider.accentColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle_outline,
+                            size: 16,
+                            color: isDarkMode ? Colors.white70 : Colors.black54,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Configure CAIPO device settings in the Wearable section',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDarkMode ? Colors.white70 : Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle_outline,
+                            size: 16,
+                            color: isDarkMode ? Colors.white70 : Colors.black54,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Enable Developer Mode for additional debugging tools',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDarkMode ? Colors.white70 : Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle_outline,
+                            size: 16,
+                            color: isDarkMode ? Colors.white70 : Colors.black54,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Optimize performance settings for your specific needs',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDarkMode ? Colors.white70 : Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ],
+            ),
+          ),
+          Positioned(
+            top: 12,
+            right: 12,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    themeProvider.accentColor.withOpacity(0.2),
+                    themeProvider.accentColor.withOpacity(0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: themeProvider.accentColor.withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.admin_panel_settings,
+                    color: themeProvider.accentColor,
+                    size: 14,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Advanced',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: themeProvider.accentColor,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -620,11 +817,13 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Ticker
 
   Widget _buildCategoryTabs(bool isDarkMode, ThemeProvider themeProvider) {
     return Container(
-      height: 50,
-      margin: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: ListView(
+      height: 60,
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        children: _settings.keys.map((category) {
+        itemCount: _settings.keys.length,
+        itemBuilder: (context, index) {
+          final category = _settings.keys.elementAt(index);
           final isSelected = _selectedCategory == category;
           final hoverKey = 'tab_$category';
           final isHovering = _hoverStates[hoverKey] ?? false;
@@ -638,80 +837,120 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Ticker
                   _selectedCategory = category;
                 });
               },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                margin: const EdgeInsets.only(right: 8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: isSelected 
-                        ? [
-                            themeProvider.accentColor.withOpacity(isDarkMode ? 0.3 : 0.2),
-                            themeProvider.accentColor.withOpacity(isDarkMode ? 0.2 : 0.1),
-                          ]
-                        : isHovering
+              child: TweenAnimationBuilder<double>(
+                tween: Tween<double>(
+                  begin: 0.0,
+                  end: isSelected ? 1.0 : 0.0,
+                ),
+                duration: const Duration(milliseconds: 300),
+                builder: (context, value, child) {
+                  return Container(
+                    width: 160,
+                    margin: const EdgeInsets.only(right: 12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: isSelected
                             ? [
-                                Colors.grey.withOpacity(isDarkMode ? 0.2 : 0.1),
-                                Colors.grey.withOpacity(isDarkMode ? 0.1 : 0.05),
+                                themeProvider.accentColor.withOpacity(0.2),
+                                themeProvider.accentColor.withOpacity(0.1),
                               ]
-                            : [
-                                Colors.transparent,
-                                Colors.transparent,
-                              ],
-                  ),
-                  borderRadius: BorderRadius.circular(themeProvider.borderRadius),
-                  border: Border.all(
-                    color: isSelected 
-                        ? themeProvider.accentColor 
-                        : isHovering
-                            ? themeProvider.accentColor.withOpacity(0.3)
-                            : themeProvider.settingsCardBorderColor,
-                    width: isSelected ? 1.5 : 1,
-                  ),
-                  boxShadow: isSelected || isHovering
-                      ? [
-                          BoxShadow(
-                            color: isSelected
-                                ? themeProvider.accentColor.withOpacity(0.1)
-                                : Colors.black.withOpacity(0.03),
-                            blurRadius: 4,
-                            spreadRadius: 0,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : [],
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _getCategoryIcon(category),
-                      size: 18,
-                      color: isSelected 
-                          ? themeProvider.accentColor
-                          : isHovering
-                              ? themeProvider.accentColor.withOpacity(0.7)
-                              : themeProvider.secondaryIconColor,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      category.replaceAll(' Options', ''),
-                      style: themeProvider.bodyMedium.copyWith(
-                        color: isSelected 
-                            ? themeProvider.accentColor
                             : isHovering
-                                ? themeProvider.accentColor.withOpacity(0.7)
-                                : themeProvider.secondaryTextColor,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                ? [
+                                    Colors.grey.withOpacity(0.1),
+                                    Colors.grey.withOpacity(0.05),
+                                  ]
+                                : [
+                                    Colors.transparent,
+                                    Colors.transparent,
+                                  ],
                       ),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isSelected
+                            ? themeProvider.accentColor.withOpacity(0.3)
+                            : isHovering
+                                ? Colors.grey.withOpacity(0.3)
+                                : Colors.grey.withOpacity(0.2),
+                        width: 1,
+                      ),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: themeProvider.accentColor.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ]
+                          : null,
                     ),
-                  ],
-                ),
+                    child: Stack(
+                      children: [
+                        if (isSelected)
+                          Positioned(
+                            right: 12,
+                            top: 12,
+                            child: Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: themeProvider.accentColor,
+                              ),
+                            ),
+                          ),
+                        Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      themeProvider.accentColor.withOpacity(isSelected ? 0.2 : 0.1),
+                                      themeProvider.accentColor.withOpacity(isSelected ? 0.1 : 0.05),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  _getCategoryIcon(category),
+                                  size: 18,
+                                  color: isSelected
+                                      ? themeProvider.accentColor
+                                      : themeProvider.secondaryIconColor,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  category.replaceAll(' Options', ''),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                    color: isSelected
+                                        ? themeProvider.accentColor
+                                        : themeProvider.secondaryTextColor,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           );
-        }).toList(),
+        },
       ),
     );
   }
@@ -1516,164 +1755,21 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Ticker
     required bool requiresRestart,
     required ValueChanged<bool> onChanged,
   }) {
-    final hoverKey = 'setting_$title';
-    final isHovering = _hoverStates[hoverKey] ?? false;
-    
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hoverStates[hoverKey] = true),
-      onExit: (_) => setState(() => _hoverStates[hoverKey] = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(bottom: 12.0),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isDarkMode
-                ? [
-                    Colors.black.withOpacity(isHovering ? 0.7 : 0.5),
-                    Colors.black.withOpacity(isHovering ? 0.6 : 0.4),
-                  ]
-                : [
-                    Colors.white.withOpacity(isHovering ? 0.95 : 0.9),
-                    Colors.white.withOpacity(isHovering ? 0.9 : 0.8),
-                  ],
-          ),
-          borderRadius: BorderRadius.circular(themeProvider.borderRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isHovering ? 0.1 : 0.05),
-              blurRadius: isHovering ? 8 : 5,
-              spreadRadius: isHovering ? 1 : 0,
-              offset: isHovering ? const Offset(0, 2) : const Offset(0, 1),
-            ),
-          ],
-          border: Border.all(
-            color: isHovering
-                ? themeProvider.accentColor.withOpacity(0.3)
-                : isDarkMode
-                    ? Colors.grey.shade800.withOpacity(0.3)
-                    : Colors.grey.shade300.withOpacity(0.5),
-            width: 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: value
-                        ? [
-                            themeProvider.accentColor.withOpacity(0.3),
-                            themeProvider.accentColor.withOpacity(0.2),
-                          ]
-                        : [
-                            Colors.grey.withOpacity(0.2),
-                            Colors.grey.withOpacity(0.1),
-                          ],
-                  ),
-                  borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
-                  boxShadow: value
-                      ? [
-                          BoxShadow(
-                            color: themeProvider.accentColor.withOpacity(0.2),
-                            blurRadius: 4,
-                            spreadRadius: 0,
-                          ),
-                        ]
-                      : [],
-                ),
-                child: Icon(
-                  icon,
-                  color: value
-                      ? themeProvider.accentColor
-                      : themeProvider.secondaryIconColor,
-                  size: 20,
-                ),
-              ),
-              title: Text(
-                title,
-                style: themeProvider.settingsTitleStyle.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: themeProvider.settingsDescriptionStyle.copyWith(
-                      color: isDarkMode
-                          ? Colors.grey.shade400
-                          : Colors.grey.shade700,
-                    ),
-                  ),
-                  if (requiresRestart) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.refresh,
-                          size: 14,
-                          color: Colors.orange,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Requires restart',
-                          style: themeProvider.bodySmall.copyWith(
-                            color: Colors.orange,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-              trailing: Switch.adaptive(
-                value: value,
-                onChanged: onChanged,
-                activeColor: themeProvider.accentColor,
-                activeTrackColor: themeProvider.accentColor.withOpacity(0.4),
-                inactiveThumbColor: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade50,
-                inactiveTrackColor: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
-              ),
-            ),
-            if (details.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isDarkMode
-                        ? Colors.black.withOpacity(0.2)
-                        : Colors.grey.shade100.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(themeProvider.borderRadius / 2),
-                    border: Border.all(
-                      color: isDarkMode
-                          ? Colors.grey.shade800.withOpacity(0.3)
-                          : Colors.grey.shade300.withOpacity(0.5),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    details,
-                    style: themeProvider.bodySmall.copyWith(
-                      color: themeProvider.secondaryTextColor,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
+    return SettingsCard(
+      title: title,
+      description: description,
+      icon: icon,
+      isHighlighted: value,
+      accentColor: themeProvider.accentColor,
+      trailing: Switch.adaptive(
+        value: value,
+        onChanged: onChanged,
+        activeColor: themeProvider.accentColor,
+        activeTrackColor: themeProvider.accentColor.withOpacity(0.4),
+        inactiveThumbColor: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade50,
+        inactiveTrackColor: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
       ),
+      onTap: () => onChanged(!value),
     );
   }
 
@@ -1716,6 +1812,8 @@ class _AdvancedSettingsPageState extends State<AdvancedSettingsPage> with Ticker
         return Icons.bug_report;
       case 'Advanced Features':
         return Icons.extension;
+      case 'CAIPO Wearable':
+        return Icons.watch;
       default:
         return Icons.settings;
     }

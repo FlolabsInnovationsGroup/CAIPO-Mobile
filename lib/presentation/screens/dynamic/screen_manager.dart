@@ -17,7 +17,7 @@ class ScreenManager {
   static BaseDynamicScreen getScreenForCommand(String command) {
     // Parse command to determine screen type
     CommandType type = _parseCommand(command);
-
+    
     // Return appropriate screen based on command type
     switch (type) {
       case CommandType.activity:
@@ -48,7 +48,7 @@ class ScreenManager {
 
   static CommandType _parseCommand(String command) {
     command = command.toLowerCase();
-
+    
     // Activity commands
     if (command.contains('exercise') ||
         command.contains('steps') ||
@@ -56,14 +56,14 @@ class ScreenManager {
         command.contains('heart rate')) {
       return CommandType.activity;
     }
-
+    
     // Transcription commands
     if (command.contains('transcribe') ||
         command.contains('record') ||
         command.contains('write this down')) {
       return CommandType.transcription;
     }
-
+    
     // Music commands
     if (command.contains('play') ||
         command.contains('music') ||
@@ -71,7 +71,7 @@ class ScreenManager {
         command.contains('playlist')) {
       return CommandType.music;
     }
-
+    
     // Calendar commands
     if (command.contains('schedule') ||
         command.contains('calendar') ||
@@ -79,7 +79,7 @@ class ScreenManager {
         command.contains('event')) {
       return CommandType.calendar;
     }
-
+    
     // Default to chat
     return CommandType.chat;
   }
@@ -122,33 +122,32 @@ class DynamicScreenContainerState extends State<DynamicScreenContainer> {
 }
 
 class DynamicScreenManager {
-  static BaseDynamicScreen? getScreenForCommand(String command,
-      {dynamic commandData}) {
+  static BaseDynamicScreen? getScreenForCommand(String command, {dynamic commandData}) {
     final lowercaseCommand = command.toLowerCase();
-
-    if (lowercaseCommand.contains('activity') ||
-        lowercaseCommand.contains('steps') ||
+    
+    if (lowercaseCommand.contains('activity') || 
+        lowercaseCommand.contains('steps') || 
         lowercaseCommand.contains('fitness')) {
       return ActivityScreen(command: command, commandData: commandData);
     }
-
-    if (lowercaseCommand.contains('music') ||
-        lowercaseCommand.contains('play') ||
+    
+    if (lowercaseCommand.contains('music') || 
+        lowercaseCommand.contains('play') || 
         lowercaseCommand.contains('song')) {
       return MusicScreen(command: command, commandData: commandData);
     }
-
-    if (lowercaseCommand.contains('calendar') ||
-        lowercaseCommand.contains('schedule') ||
+    
+    if (lowercaseCommand.contains('calendar') || 
+        lowercaseCommand.contains('schedule') || 
         lowercaseCommand.contains('events')) {
       return CalendarScreen(command: command, commandData: commandData);
     }
-
-    if (lowercaseCommand.contains('transcribe') ||
+    
+    if (lowercaseCommand.contains('transcribe') || 
         lowercaseCommand.contains('transcription')) {
       return TranscriptionScreen(command: command, commandData: commandData);
     }
-
+    
     return null;
   }
-}
+} 
